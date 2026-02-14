@@ -1,3 +1,5 @@
+#AI tools were used responsibly to support learning and development, not to replace understanding.
+
 import re
 
 def check_password_strength(password):
