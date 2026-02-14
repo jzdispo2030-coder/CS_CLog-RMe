@@ -1,6 +1,6 @@
-‎README – GateKeeper: Password Manager ‎
+GateKeeper: Password Manager ‎
 
-‎ A student-focused digital life manager designed to support first-time independent users. It helps students securely organize and manage academic, personal, and internship accounts in one structured space. By combining password storage with strength analysis, GateKeeper empowers students to build responsible digital habits from the start ‎
+‎A student-focused digital life manager designed to support first-time independent users. It helps students securely organize and manage academic, personal, and internship accounts in one structured space. By combining password storage with strength analysis, GateKeeper empowers students to build responsible digital habits from the start ‎
 
 The Features We Considered‎
 
@@ -15,9 +15,3 @@ Users can organize their accounts into groups like Academic, Personal, or Intern
 
 4. Secure Local Data Handling
 All account information is saved on the user’s device and is not sent online.‎
-
-‎Detects if password contains anything unusual ‎ ‎ ‎How to Use ‎
-
-‎1. Type a password. ‎ ‎ ‎
-2. The tool scans it and checks everything listed above. ‎ ‎ ‎
-3. You get a strength score and quick tips, sometimes including what patterns to avoid.
