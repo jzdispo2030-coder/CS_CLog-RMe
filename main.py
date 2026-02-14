@@ -1,3 +1,5 @@
+#AI tools were used responsibly to support learning and development, not to replace understanding.
+
 import json
 import os
 from password_checker import check_password_strength
