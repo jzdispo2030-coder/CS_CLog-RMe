@@ -1,6 +1,6 @@
 ‎README – Password Strength Checker ‎
 
-‎A simple and easy-to-use tool that'll help you in creating a password. It checks length, characters, variety, and how long it can take for a computer to crack the code. It can also give suggestions on what to add to your password to make it harder to crack. ‎
+‎ A student-focused digital life manager designed to support first-time independent users. It helps students securely organize and manage academic, personal, and internship accounts in one structured space. By combining password storage with strength analysis, GateKeeper empowers students to build responsible digital habits from the start ‎
 
 Features ‎
 
