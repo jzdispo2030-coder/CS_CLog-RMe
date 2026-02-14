@@ -1,24 +1,20 @@
-‎README – Password Strength Checker ‎
+‎README – GateKeeper: Password Manager ‎
 
 ‎ A student-focused digital life manager designed to support first-time independent users. It helps students securely organize and manage academic, personal, and internship accounts in one structured space. By combining password storage with strength analysis, GateKeeper empowers students to build responsible digital habits from the start ‎
 
-Features ‎
+The Features We Considered‎
 
-‎Checks length and character types. ‎ex. lowercase, uppercase, etc ‎
+1. Account Storage System
+GateKeeper lets users save different accounts with their app name, category, and password in one place.
 
-‎Spots easy to see patterns like repeated characters or keyboard sequences ‎
+2. Built-in Password Strength Checker
+The app checks how strong a password is and tells the user how to make it better.
 
-‎Estimates how long would it take for a computer to crack the code ‎
+3. Account Categorization
+Users can organize their accounts into groups like Academic, Personal, or Internship.
 
-‎Gives short, clear tips to strengthn your password ‎
-
-‎Simple strength score: Weak, Okay, Strong, Excellent ‎
-
-‎Counts how many digits and symbols are used ‎
-
-‎Checks for consecutive letters or numbers (like abcd or 1234) ‎
-
-‎Counts the unique characters in the password for variety ‎
+4. Secure Local Data Handling
+All account information is saved on the user’s device and is not sent online.‎
 
 ‎Detects if password contains anything unusual ‎ ‎ ‎How to Use ‎
 
