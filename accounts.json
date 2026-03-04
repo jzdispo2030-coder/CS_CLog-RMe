@@ -1,5 +1,9 @@
 {
-    "Jhelian": "78hufhr",
+    "Jhelian": {
+        "app": "Unknown",
+        "category": "Personal",
+        "password": "78hufhr"
+    },
     "My School LMS": {
         "app": "KHub",
         "category": "Academic",
