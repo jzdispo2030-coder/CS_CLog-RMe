@@ -57,7 +57,7 @@ VI. Programming & Computing Ethics
   - Accessibility and simplicity were prioritized in design.
   - The project aligns with principles from the ACM Code of Ethics, particularly regarding privacy and responsible computing.
     
-   In developing GateKeeper, we considered important ethical responsibilities in programming. We respected intellectual property by           writing our own original code and properly crediting any tools or technologies used, such as Python and ChatGPT.
+   In developing GateKeeper, we considered important ethical responsibilities in programming. We respected intellectual property by writing our own original code and properly crediting any tools or technologies used, such as Python, ChatGPT, DeepSeek. 
 
 VII. References
 
