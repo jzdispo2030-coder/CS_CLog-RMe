@@ -31,13 +31,13 @@ IV. Detailed Methodology:
   suggestions.
   
   - Key Design Decisions
-    1. Chose JSON for simplicity and readability.
-    2. Focused on command-line interface before adding graphics.
-    3. Expanded scope from password checker to full password keeper system.
+  1. Chose JSON for simplicity and readability.
+  2. Focused on command-line interface before adding graphics.
+  3. Expanded scope from password checker to full password keeper system.
 
   - Trade-offs
-    1. Did not implement encryption due to current skill level.
-    2. Graphics and notifications postponed for future versions.
+  1. Did not implement encryption due to current skill level.
+  2. Graphics and notifications postponed for future versions.
    
 V. Installation Instructions:
 
