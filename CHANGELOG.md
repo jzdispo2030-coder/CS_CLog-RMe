@@ -13,9 +13,8 @@ v1.3.0 - December 4, 2025
 
 v1.1.0 - November 28, 2025
 
--Added crack-time estimate 
 -Added pattern checks 
--Improved suggestions 
+-Improved suggestions
 -Updated strength score labels 
 -Added digit and symbol counting
 
