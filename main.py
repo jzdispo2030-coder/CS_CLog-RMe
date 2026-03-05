@@ -124,8 +124,50 @@ def view_accounts():
         return
 
     print("\nSaved Accounts:")
-    for nickname, data in accounts.items():
-        print(f"- {nickname} ({data['app']} | {data['category']})")
+    # Sort accounts alphabetically by nickname
+    sorted_nicknames = sorted(accounts.keys())
+    
+    # Display accounts with numbers for easy selection
+    for idx, nickname in enumerate(sorted_nicknames, 1):
+        print(f"{idx}. {nickname} ({accounts[nickname]['app']} | {accounts[nickname]['category']})")
+    
+    # Ask if user wants to delete an account
+    while True:
+        choice = input("\nDo you want to delete an account? (yes/no): ").lower()
+        if choice in ["yes", "y"]:
+            # Ask which account to delete
+            while True:
+                try:
+                    delete_num = int(input(f"Enter the number of the account to delete (1-{len(sorted_nicknames)}): "))
+                    if 1 <= delete_num <= len(sorted_nicknames):
+                        nickname_to_delete = sorted_nicknames[delete_num - 1]
+                        
+                        # Show account details and ask for confirmation
+                        print(f"\nAccount to delete: {nickname_to_delete}")
+                        print(f"App: {accounts[nickname_to_delete]['app']}")
+                        print(f"Category: {accounts[nickname_to_delete]['category']}")
+                        
+                        while True:
+                            confirm = input("\nAre you sure you want to delete this account? (yes/no): ").lower()
+                            if confirm in ["yes", "y"]:
+                                # Delete the account
+                                del accounts[nickname_to_delete]
+                                save_accounts()
+                                print("Account deleted successfully!")
+                                return
+                            elif confirm in ["no", "n"]:
+                                print("Deletion cancelled.")
+                                return
+                            else:
+                                print("Please answer 'yes' or 'no'.")
+                    else:
+                        print(f"Please enter a number between 1 and {len(sorted_nicknames)}.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+        elif choice in ["no", "n"]:
+            break
+        else:
+            print("Please answer 'yes' or 'no'.")
 
 def access_account():
     search = input("Enter account name or partial name to search: ").lower()
@@ -136,6 +178,9 @@ def access_account():
     if not matches:
         print("No accounts found matching that name.")
         return
+    
+    # Sort matches alphabetically
+    matches.sort()
     
     if len(matches) == 1:
         # Directly access the only match
