@@ -103,5 +103,6 @@ VII. Third-Party Libraries
 VIII. References
 
   Association for Computing Machinery. (2018). ACM Code of Ethics and Professional Conduct. https://www.acm.org/code-of-ethics
+  DeepSeek. (2025). DeepSeek AI Assistant [AI tool]. https://www.deepseek.com/
   OpenAI. (2024). ChatGPT (GPT-4) [Large language model]. https://chat.openai.com/
   Sweigart, A. (2024). Pyperclip. https://github.com/asweigart/pyperclip
