@@ -1,5 +1,18 @@
 CHANGELOG
 
+v2.3.0 - March 12, 2026
+
+- Added Password Generator feature
+- Added Password Reuse Detection
+- Added Graphical User Interface (GUI) with Tkinter
+- Added Pyperclip integration for one-click copy
+- Added "Other" category for uncategorized accounts
+- Added creation date tracking for all accounts
+- Added visual password strength meter in GUI
+- Added real-time search filtering in GUI
+- Improved category handling with normalization
+- Fixed GUI sorting to match CLI behavior
+
 v2.2.0 - March 5, 2026
 
 - Added duplicate account handling with overwrite confirmation
