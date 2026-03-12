@@ -2,7 +2,21 @@
 
 import json
 import os
+import random
+import string
+from datetime import datetime
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+# Pyperclip is included directly in the project (see pyperclip.py file)
+# Licensed under BSD-3-Clause - see LICENSE-pyperclip.txt
+import pyperclip
+
 from password_checker import check_password_strength
+
+# Simple formatting
+SEPARATOR = "-" * 40
+DOUBLE_SEPARATOR = "=" * 40
 
 FILENAME = "accounts.json"
 
@@ -17,207 +31,554 @@ def save_accounts():
     with open(FILENAME, "w") as file:
         json.dump(accounts, file, indent=4)
 
+def generate_password(length=16):
+    """Generate a strong random password"""
+    chars = string.ascii_letters + string.digits + "!@#$%^&*"
+    
+    while True:
+        password = ''.join(random.choice(chars) for _ in range(length))
+        if (any(c.isupper() for c in password) and
+            any(c.islower() for c in password) and
+            any(c.isdigit() for c in password) and
+            any(c in "!@#$%^&*" for c in password)):
+            return password
+
+def detect_password_reuse():
+    """Find passwords that are used across multiple accounts"""
+    password_map = {}
+    reused_passwords = []
+    
+    for nickname, data in accounts.items():
+        pwd = data['password']
+        if pwd in password_map:
+            password_map[pwd].append(nickname)
+        else:
+            password_map[pwd] = [nickname]
+    
+    for pwd, nicknames in password_map.items():
+        if len(nicknames) > 1:
+            reused_passwords.append({
+                'password': pwd,
+                'accounts': nicknames,
+                'count': len(nicknames)
+            })
+    
+    return reused_passwords
+
+def show_intro():
+    """Display introduction menu with welcome message and tips"""
+    print(f"\n{DOUBLE_SEPARATOR}")
+    print("          GATEKEEPER")
+    print(DOUBLE_SEPARATOR)
+    print("\nYour personal password manager")
+    
+    print(f"\n📁 Local storage only")
+    print("   Accounts saved on this device")
+    print("   ⚠️  Data lost if program files are deleted")
+    
+    tips = [
+        "💡 Tip: Use 12+ characters for strong passwords",
+        "💡 Tip: Mix uppercase, lowercase, numbers, symbols",
+        "💡 Tip: Never reuse passwords across accounts",
+        "💡 Tip: Search accounts by partial names",
+        "💡 Tip: You can have multiple accounts with same name",
+        "💡 Tip: Delete old accounts to stay organized",
+        "💡 Tip: Try the GUI for visual password management!"
+    ]
+    print(f"\n{random.choice(tips)}")
+    
+    account_count = len(accounts)
+    print(f"\n📊 {account_count} saved account(s)")
+    
+    reused = detect_password_reuse()
+    if reused:
+        print(f"⚠️  {len(reused)} reused password(s) detected")
+    
+    print(f"\n{SEPARATOR}")
+
 def add_account():
-    # Loop until we have a valid nickname (unique or user agrees to auto‑generate)
-    while True:
-        nickname = input("Enter account nickname (e.g., My School LMS): ")
-        if nickname in accounts:
-            print("An account with this nickname already exists.")
-            
-            # Question 1: Overwrite?
-            while True:
-                overwrite = input("Do you want to overwrite it? (yes/no): ").lower()
-                if overwrite in ["yes", "y"]:
-                    # Confirmation before overwriting
-                    confirm = input("Are you sure you want to overwrite? This will replace the existing account. (yes/no): ").lower()
-                    if confirm in ["yes", "y"]:
-                        # Overwrite confirmed – exit nickname loop and proceed
+    nickname = input("\nNickname (e.g., My School LMS): ")
+
+    app = input("App name (e.g., Canvas, Gmail): ")
+    category = input("Category (Academic/Personal/Internship/Other): ")
+    if category not in ["Academic", "Personal", "Internship", "Other"]:
+        print("Category set to 'Other'")
+        category = "Other"
+
+    use_generated = input("Generate strong password? (y/n): ").lower()
+    if use_generated in ["yes", "y"]:
+        password = generate_password()
+        print(f"Generated: {password}")
+    else:
+        while True:
+            password = input("Password: ")
+
+            score, issues = check_password_strength(password)
+
+            print(f"\nStrength: {score}/5")
+
+            if issues:
+                print("Issues:")
+                for issue in issues:
+                    print(f"  • {issue}")
+
+                while True:
+                    change = input("\nChange password? (y/n): ").lower()
+                    if change in ["yes", "y"]:
+                        print("")
                         break
-                    elif confirm in ["no", "n"]:
-                        print("Overwrite cancelled.")
-                        # Go back to the start of the duplicate handling
-                        continue
+                    elif change in ["no", "n"]:
+                        print("Saved with weaknesses\n")
+                        break
                     else:
-                        print("Please answer 'yes' or 'no'.")
-                elif overwrite in ["no", "n"]:
-                    # User does not want to overwrite → move to Question 2
-                    break
-                else:
-                    print("Please answer 'yes' or 'no'.")
-            
-            # If overwrite was confirmed, we break out of the nickname loop
-            if overwrite in ["yes", "y"] and confirm in ["yes", "y"]:
-                break
-
-            # Question 2: Create a similar name automatically?
-            while True:
-                create_similar = input("Do you want to create a new account with a similar name instead? (yes/no): ").lower()
-                if create_similar in ["yes", "y"]:
-                    # Generate unique nickname by appending a number
-                    base_nickname = nickname
-                    counter = 2
-                    while f"{base_nickname} ({counter})" in accounts:
-                        counter += 1
-                    nickname = f"{base_nickname} ({counter})"
-                    print(f"New nickname generated: {nickname}")
-                    break
-                elif create_similar in ["no", "n"]:
-                    print("Please choose a different nickname.")
-                    break
-                else:
-                    print("Please answer 'yes' or 'no'.")
-            
-            # If they chose to create a similar name, we exit the nickname loop
-            if create_similar in ["yes", "y"]:
-                break
-            # Otherwise (they chose no), loop continues to ask for a new nickname
-            continue
-        else:
-            # Nickname is unique – exit loop
-            break
-
-    app = input("Enter app/platform name (e.g., Canvas, Gmail, Bank): ")
-    category = input("Enter category (Academic / Personal / Internship): ")
-
-    while True:
-        password = input("Enter password: ")
-
-        score, issues = check_password_strength(password)
-
-        print("\nPassword Strength:", score, "/ 5")
-
-        if issues:
-            print("Issues:")
-            for issue in issues:
-                print("-", issue)
-
-            while True:
-                change = input("\nThis password seems too easy. Would you like to change it? (yes/no): ").lower()
+                        print("Please answer y or n")
                 if change in ["yes", "y"]:
-                    print("Let's try again!\n")
-                    break
-                elif change in ["no", "n"]:
-                    print("Password saved despite weaknesses.\n")
-                    break
+                    continue
                 else:
-                    print("Please answer 'yes' or 'no'.")
-            if change in ["yes", "y"]:
-                continue
+                    break
             else:
+                print("Strong password!")
                 break
-        else:
-            print("Strong password! Great job!")
-            break
 
+    # Check for duplicate data
+    duplicate_found = False
+    duplicate_nicknames = []
+    
+    for existing_nick, existing_data in accounts.items():
+        if (existing_data["app"] == app and 
+            existing_data["category"] == category and 
+            existing_data["password"] == password):
+            duplicate_found = True
+            duplicate_nicknames.append(existing_nick)
+    
+    if duplicate_found:
+        print(f"\n⚠️  Duplicate account found:")
+        for dup_nick in duplicate_nicknames:
+            print(f"  • {dup_nick}")
+        
+        while True:
+            continue_anyway = input("\nSave anyway? (y/n): ").lower()
+            if continue_anyway in ["yes", "y"]:
+                print("Saving...\n")
+                break
+            elif continue_anyway in ["no", "n"]:
+                print("Cancelled\n")
+                return
+            else:
+                print("Please answer y or n")
+
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
     accounts[nickname] = {
         "app": app,
         "category": category,
-        "password": password
+        "password": password,
+        "created": current_time,
+        "last_modified": current_time
     }
 
     save_accounts()
-    print("Account saved successfully!\n")
+    print("✓ Account saved\n")
 
 def view_accounts():
     if not accounts:
-        print("No accounts saved yet.")
+        print("\nNo accounts saved yet")
         return
 
-    print("\nSaved Accounts:")
-    # Sort accounts alphabetically by nickname
-    sorted_nicknames = sorted(accounts.keys())
+    print(f"\nFilter:")
+    print("1. All")
+    print("2. Academic")
+    print("3. Personal")
+    print("4. Internship")
+    print("5. Other")
     
-    # Display accounts with numbers for easy selection
+    filter_choice = input("Choice (1-5): ")
+    
+    # Filter accounts based on choice
+    filtered_accounts = {}
+    if filter_choice == "1":
+        filtered_accounts = accounts
+    elif filter_choice == "2":
+        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() == "academic"}
+    elif filter_choice == "3":
+        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() == "personal"}
+    elif filter_choice == "4":
+        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() == "internship"}
+    elif filter_choice == "5":
+        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() not in ["academic", "personal", "internship"]}
+    else:
+        print("Showing all")
+        filtered_accounts = accounts
+    
+    if not filtered_accounts:
+        print("No accounts in this category")
+        return
+
+    print(f"\nSaved Accounts:")
+    sorted_nicknames = sorted(filtered_accounts.keys())
+    
     for idx, nickname in enumerate(sorted_nicknames, 1):
-        print(f"{idx}. {nickname} ({accounts[nickname]['app']} | {accounts[nickname]['category']})")
+        data = filtered_accounts[nickname]
+        created = data.get('created', 'Unknown').split()[0]
+        print(f"{idx}. {nickname} ({data['app']} | {data['category']})")
+        print(f"   📅 {created}")
     
-    # Ask if user wants to delete an account
     while True:
-        choice = input("\nDo you want to delete an account? (yes/no): ").lower()
+        choice = input("\nDelete an account? (y/n): ").lower()
         if choice in ["yes", "y"]:
-            # Ask which account to delete
             while True:
                 try:
-                    delete_num = int(input(f"Enter the number of the account to delete (1-{len(sorted_nicknames)}): "))
+                    delete_num = int(input(f"Account number to delete (1-{len(sorted_nicknames)}): "))
                     if 1 <= delete_num <= len(sorted_nicknames):
                         nickname_to_delete = sorted_nicknames[delete_num - 1]
                         
-                        # Show account details and ask for confirmation
-                        print(f"\nAccount to delete: {nickname_to_delete}")
+                        print(f"\nDelete: {nickname_to_delete}")
                         print(f"App: {accounts[nickname_to_delete]['app']}")
-                        print(f"Category: {accounts[nickname_to_delete]['category']}")
                         
                         while True:
-                            confirm = input("\nAre you sure you want to delete this account? (yes/no): ").lower()
+                            confirm = input("\nConfirm delete? (y/n): ").lower()
                             if confirm in ["yes", "y"]:
-                                # Delete the account
                                 del accounts[nickname_to_delete]
                                 save_accounts()
-                                print("Account deleted successfully!")
+                                print("✓ Account deleted")
                                 return
                             elif confirm in ["no", "n"]:
-                                print("Deletion cancelled.")
+                                print("Cancelled")
                                 return
                             else:
-                                print("Please answer 'yes' or 'no'.")
+                                print("Please answer y or n")
                     else:
-                        print(f"Please enter a number between 1 and {len(sorted_nicknames)}.")
+                        print(f"Enter 1-{len(sorted_nicknames)}")
                 except ValueError:
-                    print("Invalid input. Please enter a number.")
+                    print("Enter a number")
         elif choice in ["no", "n"]:
             break
         else:
-            print("Please answer 'yes' or 'no'.")
+            print("Please answer y or n")
 
 def access_account():
-    search = input("Enter account name or partial name to search: ").lower()
+    search = input("\nSearch (partial name): ").lower()
     
-    # Find all nicknames that contain the search term (case-insensitive)
     matches = [nick for nick in accounts if search in nick.lower()]
     
     if not matches:
-        print("No accounts found matching that name.")
+        print("No matches found")
         return
     
-    # Sort matches alphabetically
     matches.sort()
     
     if len(matches) == 1:
-        # Directly access the only match
         nickname = matches[0]
-        print("\n--- Account Details ---")
-        print("App:", accounts[nickname]["app"])
-        print("Category:", accounts[nickname]["category"])
-        print("Password:", accounts[nickname]["password"])
+        print(f"\n--- {nickname} ---")
+        print(f"App: {accounts[nickname]['app']}")
+        print(f"Category: {accounts[nickname]['category']}")
+        print(f"Password: {accounts[nickname]['password']}")
+        created = accounts[nickname].get('created', 'Unknown').split()[0]
+        print(f"Created: {created}")
     else:
-        # Multiple matches – list them and let user choose
-        print("\nMultiple accounts found:")
+        print(f"\nMatches:")
         for idx, nick in enumerate(matches, 1):
             print(f"{idx}. {nick}")
         
         while True:
             try:
-                choice = int(input(f"\nEnter the number of the account you want to access (1-{len(matches)}): "))
+                choice = int(input(f"\nChoose (1-{len(matches)}): "))
                 if 1 <= choice <= len(matches):
                     nickname = matches[choice - 1]
-                    print("\n--- Account Details ---")
-                    print("App:", accounts[nickname]["app"])
-                    print("Category:", accounts[nickname]["category"])
-                    print("Password:", accounts[nickname]["password"])
+                    print(f"\n--- {nickname} ---")
+                    print(f"App: {accounts[nickname]['app']}")
+                    print(f"Category: {accounts[nickname]['category']}")
+                    print(f"Password: {accounts[nickname]['password']}")
+                    created = accounts[nickname].get('created', 'Unknown').split()[0]
+                    print(f"Created: {created}")
                     break
                 else:
-                    print(f"Please enter a number between 1 and {len(matches)}.")
+                    print(f"Enter 1-{len(matches)}")
             except ValueError:
-                print("Invalid input. Please enter a number.")
+                print("Enter a number")
+
+def show_password_reuse():
+    reused = detect_password_reuse()
+    
+    if not reused:
+        print(f"\n✓ No password reuse detected")
+        return
+    
+    print(f"\n⚠️  PASSWORD REUSE")
+    print(SEPARATOR)
+    
+    for item in reused:
+        print(f"\nPassword: {item['password']}")
+        print(f"Used in {item['count']} accounts:")
+        for acc in item['accounts']:
+            print(f"  • {acc} ({accounts[acc]['app']})")
+    
+    print(f"\n⚠️  Use unique passwords for better security")
+
+# ============================================================================
+# ENHANCED GUI WITH PYPERCLIP
+# ============================================================================
+
+class GateKeeperGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("GateKeeper Password Manager")
+        self.root.geometry("750x600")
+        
+        # Password visibility toggle
+        self.show_passwords = False
+        
+        # Current selected account
+        self.current_account = None
+        
+        self.setup_ui()
+        self.refresh_list()
+    
+    def setup_ui(self):
+        # Top frame for search and actions
+        top_frame = ttk.Frame(self.root, padding="10")
+        top_frame.pack(fill=tk.X)
+        
+        # Search bar with real-time filtering
+        ttk.Label(top_frame, text="Search:").pack(side=tk.LEFT, padx=5)
+        self.search_var = tk.StringVar()
+        self.search_var.trace('w', self.filter_list)
+        search_entry = ttk.Entry(top_frame, textvariable=self.search_var, width=30)
+        search_entry.pack(side=tk.LEFT, padx=5)
+        
+        # Category filter dropdown
+        ttk.Label(top_frame, text="Category:").pack(side=tk.LEFT, padx=(20,5))
+        self.category_var = tk.StringVar(value="All")
+        category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, 
+                                       values=["All", "Academic", "Personal", "Internship", "Other"],
+                                       state="readonly", width=15)
+        category_combo.pack(side=tk.LEFT, padx=5)
+        category_combo.bind('<<ComboboxSelected>>', self.filter_list)
+        
+        # Refresh button
+        refresh_btn = ttk.Button(top_frame, text="🔄 Refresh", command=self.refresh_list)
+        refresh_btn.pack(side=tk.RIGHT, padx=5)
+        
+        # Main content area (paned window)
+        paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        # Left frame - Account list
+        left_frame = ttk.Frame(paned)
+        paned.add(left_frame, weight=1)
+        
+        # Account list with scrollbar
+        list_frame = ttk.Frame(left_frame)
+        list_frame.pack(fill=tk.BOTH, expand=True)
+        
+        scrollbar = ttk.Scrollbar(list_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.accounts_list = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
+                                        font=('Courier', 10), selectmode=tk.SINGLE)
+        self.accounts_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.accounts_list.bind('<<ListboxSelect>>', self.on_account_select)
+        
+        scrollbar.config(command=self.accounts_list.yview)
+        
+        # Right frame - Account details and actions
+        right_frame = ttk.Frame(paned, padding="10")
+        paned.add(right_frame, weight=1)
+        
+        # Details display
+        ttk.Label(right_frame, text="Account Details", font=('Arial', 12, 'bold')).pack(pady=5)
+        
+        self.details_text = tk.Text(right_frame, height=10, width=35, font=('Courier', 10))
+        self.details_text.pack(fill=tk.X, pady=5)
+        self.details_text.config(state=tk.DISABLED)
+        
+        # Action buttons
+        btn_frame = ttk.Frame(right_frame)
+        btn_frame.pack(fill=tk.X, pady=10)
+        
+        self.copy_btn = ttk.Button(btn_frame, text="📋 Copy Password", 
+                                   command=self.copy_password, state=tk.DISABLED)
+        self.copy_btn.pack(fill=tk.X, pady=2)
+        
+        self.toggle_btn = ttk.Button(btn_frame, text="👁️ Show Password", 
+                                     command=self.toggle_password, state=tk.DISABLED)
+        self.toggle_btn.pack(fill=tk.X, pady=2)
+        
+        # Strength meter
+        self.strength_frame = ttk.Frame(right_frame)
+        self.strength_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(self.strength_frame, text="Password Strength:").pack()
+        self.strength_bar = ttk.Progressbar(self.strength_frame, length=200, mode='determinate')
+        self.strength_bar.pack(pady=5)
+        self.strength_label = ttk.Label(self.strength_frame, text="")
+        self.strength_label.pack()
+        
+        # Delete button (with confirmation)
+        self.delete_btn = ttk.Button(right_frame, text="🗑️ Delete Account", 
+                                     command=self.delete_account, state=tk.DISABLED)
+        self.delete_btn.pack(fill=tk.X, pady=2)
+        
+        # Status bar
+        self.status_var = tk.StringVar()
+        self.status_var.set("Ready")
+        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN)
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+    
+    def refresh_list(self):
+        """Refresh the account list"""
+        self.accounts_list.delete(0, tk.END)
+        
+        for nickname, data in accounts.items():
+            display_text = f"{nickname} - {data['app']} [{data['category']}]"
+            self.accounts_list.insert(tk.END, display_text)
+        
+        self.status_var.set(f"Total: {len(accounts)} accounts")
+    
+    def filter_list(self, *args):
+        """Filter accounts based on search term and category"""
+        search_term = self.search_var.get().lower()
+        category_filter = self.category_var.get()
+        
+        self.accounts_list.delete(0, tk.END)
+        
+        for nickname, data in accounts.items():
+            # Apply category filter
+            if category_filter != "All":
+                if category_filter == "Other":
+                    if data['category'].lower() in ["academic", "personal", "internship"]:
+                        continue
+                elif data['category'] != category_filter:
+                    continue
+            
+            # Apply search filter
+            if search_term:
+                if (search_term not in nickname.lower() and 
+                    search_term not in data['app'].lower()):
+                    continue
+            
+            display_text = f"{nickname} - {data['app']} [{data['category']}]"
+            self.accounts_list.insert(tk.END, display_text)
+    
+    def on_account_select(self, event):
+        """Handle account selection"""
+        selection = self.accounts_list.curselection()
+        if not selection:
+            return
+        
+        # Get the selected account nickname
+        display_text = self.accounts_list.get(selection[0])
+        nickname = display_text.split(" - ")[0]
+        
+        if nickname in accounts:
+            self.current_account = nickname
+            self.display_account_details(nickname)
+            
+            # Enable buttons
+            self.copy_btn.config(state=tk.NORMAL)
+            self.toggle_btn.config(state=tk.NORMAL)
+            self.delete_btn.config(state=tk.NORMAL)
+    
+    def display_account_details(self, nickname):
+        """Display account details in the text area"""
+        data = accounts[nickname]
+        
+        # Show/hide password based on toggle
+        password_display = data['password'] if self.show_passwords else "•" * len(data['password'])
+        
+        details = f"Nickname: {nickname}\n"
+        details += f"App: {data['app']}\n"
+        details += f"Category: {data['category']}\n"
+        details += f"Password: {password_display}\n"
+        details += f"Created: {data.get('created', 'Unknown')}\n"
+        details += f"Modified: {data.get('last_modified', 'Unknown')}"
+        
+        self.details_text.config(state=tk.NORMAL)
+        self.details_text.delete(1.0, tk.END)
+        self.details_text.insert(1.0, details)
+        self.details_text.config(state=tk.DISABLED)
+        
+        # Update strength meter
+        score, _ = check_password_strength(data['password'])
+        self.strength_bar['value'] = (score / 5) * 100
+        
+        strength_texts = ["Very Weak", "Weak", "Fair", "Good", "Strong"]
+        self.strength_label.config(text=strength_texts[score])
+        
+        # Update toggle button text
+        if self.show_passwords:
+            self.toggle_btn.config(text="👁️ Hide Password")
+        else:
+            self.toggle_btn.config(text="👁️ Show Password")
+    
+    def copy_password(self):
+        """Copy password to clipboard using pyperclip"""
+        if self.current_account and self.current_account in accounts:
+            password = accounts[self.current_account]['password']
+            try:
+                pyperclip.copy(password)
+                self.status_var.set("✓ Password copied to clipboard!")
+            except Exception as e:
+                self.status_var.set(f"❌ Copy failed: {str(e)}")
+    
+    def toggle_password(self):
+        """Toggle password visibility"""
+        self.show_passwords = not self.show_passwords
+        if self.current_account:
+            self.display_account_details(self.current_account)
+    
+    def delete_account(self):
+        """Delete current account with confirmation"""
+        if not self.current_account:
+            return
+        
+        result = messagebox.askyesno(
+            "Confirm Delete",
+            f"Are you sure you want to delete '{self.current_account}'?\n\nThis cannot be undone."
+        )
+        
+        if result:
+            del accounts[self.current_account]
+            save_accounts()
+            self.current_account = None
+            self.refresh_list()
+            
+            # Clear details
+            self.details_text.config(state=tk.NORMAL)
+            self.details_text.delete(1.0, tk.END)
+            self.details_text.config(state=tk.DISABLED)
+            
+            # Disable buttons
+            self.copy_btn.config(state=tk.DISABLED)
+            self.toggle_btn.config(state=tk.DISABLED)
+            self.delete_btn.config(state=tk.DISABLED)
+            
+            # Reset strength meter
+            self.strength_bar['value'] = 0
+            self.strength_label.config(text="")
+            
+            self.status_var.set("✓ Account deleted")
+
+def launch_gui():
+    """Launch enhanced GUI"""
+    root = tk.Tk()
+    app = GateKeeperGUI(root)
+    root.mainloop()
+
+# Show introduction menu
+show_intro()
 
 while True:
-    print("\n===== GateKeeper =====")
+    print(f"\nGATEKEEPER MENU")
+    print(SEPARATOR)
     print("1. Add Account")
     print("2. View Accounts")
     print("3. Access Account")
-    print("4. Exit")
+    print("4. Check Password Reuse")
+    print("5. Launch GUI")
+    print("6. Exit")
 
-    choice = input("Choose an option: ")
+    choice = input("\nChoice: ")
 
     if choice == "1":
         add_account()
@@ -226,6 +587,11 @@ while True:
     elif choice == "3":
         access_account()
     elif choice == "4":
+        show_password_reuse()
+    elif choice == "5":
+        launch_gui()
+    elif choice == "6":
+        print("\nGoodbye!\n")
         break
     else:
-        print("Invalid option.")
+        print("Invalid option")
