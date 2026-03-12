@@ -101,8 +101,12 @@ def add_account():
 
     app = input("App name (e.g., Canvas, Gmail): ")
     category = input("Category (Academic/Personal/Internship/Other): ")
-    if category not in ["Academic", "Personal", "Internship", "Other"]:
-        print("Category set to 'Other'")
+    
+    # Normalize category
+    category_lower = category.lower()
+    if category_lower in ["academic", "personal", "internship"]:
+        category = category_lower.capitalize()
+    else:
         category = "Other"
 
     use_generated = input("Generate strong password? (y/n): ").lower()
@@ -429,7 +433,11 @@ class GateKeeperGUI:
         """Refresh the account list"""
         self.accounts_list.delete(0, tk.END)
         
-        for nickname, data in accounts.items():
+        # Sort accounts alphabetically for display
+        sorted_nicknames = sorted(accounts.keys())
+        
+        for nickname in sorted_nicknames:
+            data = accounts[nickname]
             display_text = f"{nickname} - {data['app']} [{data['category']}]"
             self.accounts_list.insert(tk.END, display_text)
         
@@ -442,7 +450,12 @@ class GateKeeperGUI:
         
         self.accounts_list.delete(0, tk.END)
         
-        for nickname, data in accounts.items():
+        # Sort accounts alphabetically for display
+        sorted_nicknames = sorted(accounts.keys())
+        
+        for nickname in sorted_nicknames:
+            data = accounts[nickname]
+            
             # Apply category filter
             if category_filter != "All":
                 if category_filter == "Other":
