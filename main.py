@@ -6,17 +6,13 @@ import random
 import string
 from datetime import datetime
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 
 # Pyperclip is included directly in the project (see pyperclip.py file)
 # Licensed under BSD-3-Clause - see LICENSE-pyperclip.txt
 import pyperclip
 
 from password_checker import check_password_strength
-
-# Simple formatting
-SEPARATOR = "-" * 40
-DOUBLE_SEPARATOR = "=" * 40
 
 FILENAME = "accounts.json"
 
@@ -65,311 +61,128 @@ def detect_password_reuse():
     
     return reused_passwords
 
-def show_intro():
-    """Display introduction menu with welcome message and tips"""
-    print(f"\n{DOUBLE_SEPARATOR}")
-    print("          GATEKEEPER")
-    print(DOUBLE_SEPARATOR)
-    print("\nYour personal password manager")
-    
-    print(f"\n📁 Local storage only")
-    print("   Accounts saved on this device")
-    print("   ⚠️  Data lost if program files are deleted")
-    
-    tips = [
-        "💡 Tip: Use 12+ characters for strong passwords",
-        "💡 Tip: Mix uppercase, lowercase, numbers, symbols",
-        "💡 Tip: Never reuse passwords across accounts",
-        "💡 Tip: Search accounts by partial names",
-        "💡 Tip: You can have multiple accounts with same name",
-        "💡 Tip: Delete old accounts to stay organized",
-        "💡 Tip: Try the GUI for visual password management!"
-    ]
-    print(f"\n{random.choice(tips)}")
-    
-    account_count = len(accounts)
-    print(f"\n📊 {account_count} saved account(s)")
-    
-    reused = detect_password_reuse()
-    if reused:
-        print(f"⚠️  {len(reused)} reused password(s) detected")
-    
-    print(f"\n{SEPARATOR}")
-
-def add_account():
-    nickname = input("\nNickname (e.g., My School LMS): ")
-
-    app = input("App name (e.g., Canvas, Gmail): ")
-    category = input("Category (Academic/Personal/Internship/Other): ")
-    
-    # Normalize category
-    category_lower = category.lower()
-    if category_lower in ["academic", "personal", "internship"]:
-        category = category_lower.capitalize()
-    else:
-        category = "Other"
-
-    use_generated = input("Generate strong password? (y/n): ").lower()
-    if use_generated in ["yes", "y"]:
-        password = generate_password()
-        print(f"Generated: {password}")
-    else:
-        while True:
-            password = input("Password: ")
-
-            score, issues = check_password_strength(password)
-
-            print(f"\nStrength: {score}/5")
-
-            if issues:
-                print("Issues:")
-                for issue in issues:
-                    print(f"  • {issue}")
-
-                while True:
-                    change = input("\nChange password? (y/n): ").lower()
-                    if change in ["yes", "y"]:
-                        print("")
-                        break
-                    elif change in ["no", "n"]:
-                        print("Saved with weaknesses\n")
-                        break
-                    else:
-                        print("Please answer y or n")
-                if change in ["yes", "y"]:
-                    continue
-                else:
-                    break
-            else:
-                print("Strong password!")
-                break
-
-    # Check for duplicate data
-    duplicate_found = False
-    duplicate_nicknames = []
-    
-    for existing_nick, existing_data in accounts.items():
-        if (existing_data["app"] == app and 
-            existing_data["category"] == category and 
-            existing_data["password"] == password):
-            duplicate_found = True
-            duplicate_nicknames.append(existing_nick)
-    
-    if duplicate_found:
-        print(f"\n⚠️  Duplicate account found:")
-        for dup_nick in duplicate_nicknames:
-            print(f"  • {dup_nick}")
-        
-        while True:
-            continue_anyway = input("\nSave anyway? (y/n): ").lower()
-            if continue_anyway in ["yes", "y"]:
-                print("Saving...\n")
-                break
-            elif continue_anyway in ["no", "n"]:
-                print("Cancelled\n")
-                return
-            else:
-                print("Please answer y or n")
-
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-    
-    accounts[nickname] = {
-        "app": app,
-        "category": category,
-        "password": password,
-        "created": current_time,
-        "last_modified": current_time
-    }
-
-    save_accounts()
-    print("✓ Account saved\n")
-
-def view_accounts():
-    if not accounts:
-        print("\nNo accounts saved yet")
-        return
-
-    print(f"\nFilter:")
-    print("1. All")
-    print("2. Academic")
-    print("3. Personal")
-    print("4. Internship")
-    print("5. Other")
-    
-    filter_choice = input("Choice (1-5): ")
-    
-    # Filter accounts based on choice
-    filtered_accounts = {}
-    if filter_choice == "1":
-        filtered_accounts = accounts
-    elif filter_choice == "2":
-        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() == "academic"}
-    elif filter_choice == "3":
-        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() == "personal"}
-    elif filter_choice == "4":
-        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() == "internship"}
-    elif filter_choice == "5":
-        filtered_accounts = {k: v for k, v in accounts.items() if v["category"].lower() not in ["academic", "personal", "internship"]}
-    else:
-        print("Showing all")
-        filtered_accounts = accounts
-    
-    if not filtered_accounts:
-        print("No accounts in this category")
-        return
-
-    print(f"\nSaved Accounts:")
-    sorted_nicknames = sorted(filtered_accounts.keys())
-    
-    for idx, nickname in enumerate(sorted_nicknames, 1):
-        data = filtered_accounts[nickname]
-        created = data.get('created', 'Unknown').split()[0]
-        print(f"{idx}. {nickname} ({data['app']} | {data['category']})")
-        print(f"   📅 {created}")
-    
-    while True:
-        choice = input("\nDelete an account? (y/n): ").lower()
-        if choice in ["yes", "y"]:
-            while True:
-                try:
-                    delete_num = int(input(f"Account number to delete (1-{len(sorted_nicknames)}): "))
-                    if 1 <= delete_num <= len(sorted_nicknames):
-                        nickname_to_delete = sorted_nicknames[delete_num - 1]
-                        
-                        print(f"\nDelete: {nickname_to_delete}")
-                        print(f"App: {accounts[nickname_to_delete]['app']}")
-                        
-                        while True:
-                            confirm = input("\nConfirm delete? (y/n): ").lower()
-                            if confirm in ["yes", "y"]:
-                                del accounts[nickname_to_delete]
-                                save_accounts()
-                                print("✓ Account deleted")
-                                return
-                            elif confirm in ["no", "n"]:
-                                print("Cancelled")
-                                return
-                            else:
-                                print("Please answer y or n")
-                    else:
-                        print(f"Enter 1-{len(sorted_nicknames)}")
-                except ValueError:
-                    print("Enter a number")
-        elif choice in ["no", "n"]:
-            break
-        else:
-            print("Please answer y or n")
-
-def access_account():
-    search = input("\nSearch (partial name): ").lower()
-    
-    matches = [nick for nick in accounts if search in nick.lower()]
-    
-    if not matches:
-        print("No matches found")
-        return
-    
-    matches.sort()
-    
-    if len(matches) == 1:
-        nickname = matches[0]
-        print(f"\n--- {nickname} ---")
-        print(f"App: {accounts[nickname]['app']}")
-        print(f"Category: {accounts[nickname]['category']}")
-        print(f"Password: {accounts[nickname]['password']}")
-        created = accounts[nickname].get('created', 'Unknown').split()[0]
-        print(f"Created: {created}")
-    else:
-        print(f"\nMatches:")
-        for idx, nick in enumerate(matches, 1):
-            print(f"{idx}. {nick}")
-        
-        while True:
-            try:
-                choice = int(input(f"\nChoose (1-{len(matches)}): "))
-                if 1 <= choice <= len(matches):
-                    nickname = matches[choice - 1]
-                    print(f"\n--- {nickname} ---")
-                    print(f"App: {accounts[nickname]['app']}")
-                    print(f"Category: {accounts[nickname]['category']}")
-                    print(f"Password: {accounts[nickname]['password']}")
-                    created = accounts[nickname].get('created', 'Unknown').split()[0]
-                    print(f"Created: {created}")
-                    break
-                else:
-                    print(f"Enter 1-{len(matches)}")
-            except ValueError:
-                print("Enter a number")
-
-def show_password_reuse():
-    reused = detect_password_reuse()
-    
-    if not reused:
-        print(f"\n✓ No password reuse detected")
-        return
-    
-    print(f"\n⚠️  PASSWORD REUSE")
-    print(SEPARATOR)
-    
-    for item in reused:
-        print(f"\nPassword: {item['password']}")
-        print(f"Used in {item['count']} accounts:")
-        for acc in item['accounts']:
-            print(f"  • {acc} ({accounts[acc]['app']})")
-    
-    print(f"\n⚠️  Use unique passwords for better security")
-
 # ============================================================================
-# ENHANCED GUI WITH PYPERCLIP AND EDIT FEATURE
+# MAIN GUI APPLICATION
 # ============================================================================
 
 class GateKeeperGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("GateKeeper Password Manager")
-        self.root.geometry("750x600")
+        self.root.geometry("900x700")
         
         # Password visibility toggle
         self.show_passwords = False
         
+        # Track if user has verified show password
+        self.password_revealed = False
+        
         # Current selected account
         self.current_account = None
         
+        self.setup_menu()
         self.setup_ui()
+        self.show_intro()
         self.refresh_list()
     
+    def setup_menu(self):
+        """Create menu bar"""
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Add Account", command=self.add_account_dialog, accelerator="Ctrl+N")
+        file_menu.add_command(label="Exit", command=self.root.quit)
+        
+        # View menu
+        view_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="View", menu=view_menu)
+        view_menu.add_command(label="Refresh List", command=self.refresh_list)
+        view_menu.add_separator()
+        view_menu.add_command(label="Show All", command=lambda: self.set_category_filter("All"))
+        view_menu.add_command(label="Show Academic", command=lambda: self.set_category_filter("Academic"))
+        view_menu.add_command(label="Show Personal", command=lambda: self.set_category_filter("Personal"))
+        view_menu.add_command(label="Show Internship", command=lambda: self.set_category_filter("Internship"))
+        view_menu.add_command(label="Show Other", command=lambda: self.set_category_filter("Other"))
+        
+        # Tools menu
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+        tools_menu.add_command(label="Password Reuse Report", command=self.show_password_reuse)
+        tools_menu.add_command(label="Generate Password", command=self.show_password_generator)
+        
+        # Help menu
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="About", command=self.show_about)
+        help_menu.add_command(label="Local Storage Warning", command=self.show_storage_warning)
+        
+        # Keyboard shortcuts
+        self.root.bind('<Control-n>', lambda e: self.add_account_dialog())
+    
     def setup_ui(self):
-        # Top frame for search and actions
+        # Top frame for welcome and stats
         top_frame = ttk.Frame(self.root, padding="10")
         top_frame.pack(fill=tk.X)
         
-        # Search bar with real-time filtering
-        ttk.Label(top_frame, text="Search:").pack(side=tk.LEFT, padx=5)
+        self.welcome_label = ttk.Label(top_frame, text="GateKeeper Password Manager", font=('Arial', 16, 'bold'))
+        self.welcome_label.pack()
+        
+        self.stats_label = ttk.Label(top_frame, text="", font=('Arial', 10))
+        self.stats_label.pack()
+        
+        # Warning frame
+        warning_frame = ttk.Frame(top_frame)
+        warning_frame.pack(fill=tk.X, pady=5)
+        
+        self.warning_text = tk.Text(warning_frame, height=3, width=80, font=('Arial', 9), fg='red', wrap=tk.WORD)
+        self.warning_text.pack(fill=tk.X)
+        self.warning_text.insert(1.0, "⚠️ LOCAL STORAGE ONLY: Accounts are saved on this device only. Data will be lost if program files are deleted.")
+        self.warning_text.config(state=tk.DISABLED)
+        
+        # Tip of the day
+        self.tip_label = ttk.Label(top_frame, text="", font=('Arial', 9, 'italic'))
+        self.tip_label.pack(pady=5)
+        
+        # Separator
+        ttk.Separator(self.root, orient='horizontal').pack(fill=tk.X, padx=10, pady=5)
+        
+        # Search and filter frame
+        filter_frame = ttk.Frame(self.root, padding="10")
+        filter_frame.pack(fill=tk.X)
+        
+        # Search bar
+        ttk.Label(filter_frame, text="Search:").pack(side=tk.LEFT, padx=5)
         self.search_var = tk.StringVar()
         self.search_var.trace('w', self.filter_list)
-        search_entry = ttk.Entry(top_frame, textvariable=self.search_var, width=30)
+        search_entry = ttk.Entry(filter_frame, textvariable=self.search_var, width=30)
         search_entry.pack(side=tk.LEFT, padx=5)
         
-        # Category filter dropdown
-        ttk.Label(top_frame, text="Category:").pack(side=tk.LEFT, padx=(20,5))
+        # Category filter
+        ttk.Label(filter_frame, text="Category:").pack(side=tk.LEFT, padx=(20,5))
         self.category_var = tk.StringVar(value="All")
-        category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, 
+        category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var, 
                                        values=["All", "Academic", "Personal", "Internship", "Other"],
                                        state="readonly", width=15)
         category_combo.pack(side=tk.LEFT, padx=5)
         category_combo.bind('<<ComboboxSelected>>', self.filter_list)
         
-        # Refresh button
-        refresh_btn = ttk.Button(top_frame, text="🔄 Refresh", command=self.refresh_list)
-        refresh_btn.pack(side=tk.RIGHT, padx=5)
+        # Add account button
+        add_btn = ttk.Button(filter_frame, text="➕ Add Account", command=self.add_account_dialog)
+        add_btn.pack(side=tk.RIGHT, padx=5)
         
-        # Main content area (paned window)
+        # Main content area
         paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
         # Left frame - Account list
         left_frame = ttk.Frame(paned)
         paned.add(left_frame, weight=1)
+        
+        # Account list label
+        ttk.Label(left_frame, text="Your Accounts", font=('Arial', 11, 'bold')).pack(anchor=tk.W, pady=5)
         
         # Account list with scrollbar
         list_frame = ttk.Frame(left_frame)
@@ -379,9 +192,10 @@ class GateKeeperGUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.accounts_list = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                                        font=('Courier', 10), selectmode=tk.SINGLE)
+                                        font=('Courier', 10), selectmode=tk.SINGLE, height=20)
         self.accounts_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.accounts_list.bind('<<ListboxSelect>>', self.on_account_select)
+        self.accounts_list.bind('<Double-Button-1>', lambda e: self.view_account_details())
         
         scrollbar.config(command=self.accounts_list.yview)
         
@@ -392,47 +206,108 @@ class GateKeeperGUI:
         # Details display
         ttk.Label(right_frame, text="Account Details", font=('Arial', 12, 'bold')).pack(pady=5)
         
-        self.details_text = tk.Text(right_frame, height=10, width=35, font=('Courier', 10))
-        self.details_text.pack(fill=tk.X, pady=5)
+        # Security notice
+        security_frame = ttk.Frame(right_frame)
+        security_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(security_frame, text="🔒 ", font=('Arial', 10)).pack(side=tk.LEFT)
+        self.security_label = ttk.Label(security_frame, text="Click 'Show Password' to reveal", font=('Arial', 9, 'italic'), foreground='gray')
+        self.security_label.pack(side=tk.LEFT)
+        
+        # Details text with scrollbar
+        details_frame = ttk.Frame(right_frame)
+        details_frame.pack(fill=tk.BOTH, expand=True)
+        
+        details_scrollbar = ttk.Scrollbar(details_frame)
+        details_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.details_text = tk.Text(details_frame, yscrollcommand=details_scrollbar.set,
+                                    height=12, width=35, font=('Courier', 10), wrap=tk.WORD)
+        self.details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.details_text.config(state=tk.DISABLED)
+        
+        details_scrollbar.config(command=self.details_text.yview)
         
         # Action buttons
         btn_frame = ttk.Frame(right_frame)
         btn_frame.pack(fill=tk.X, pady=10)
         
-        self.copy_btn = ttk.Button(btn_frame, text="📋 Copy Password", 
+        # First row of buttons
+        row1_frame = ttk.Frame(btn_frame)
+        row1_frame.pack(fill=tk.X, pady=2)
+        
+        self.view_btn = ttk.Button(row1_frame, text="👁️ View Details", 
+                                   command=self.view_account_details, state=tk.DISABLED)
+        self.view_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        
+        self.copy_btn = ttk.Button(row1_frame, text="📋 Copy Password", 
                                    command=self.copy_password, state=tk.DISABLED)
-        self.copy_btn.pack(fill=tk.X, pady=2)
+        self.copy_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
-        self.toggle_btn = ttk.Button(btn_frame, text="👁️ Show Password", 
+        # Second row of buttons
+        row2_frame = ttk.Frame(btn_frame)
+        row2_frame.pack(fill=tk.X, pady=2)
+        
+        self.toggle_btn = ttk.Button(row2_frame, text="👁️ Show Password", 
                                      command=self.toggle_password, state=tk.DISABLED)
-        self.toggle_btn.pack(fill=tk.X, pady=2)
+        self.toggle_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
-        # Edit button
-        self.edit_btn = ttk.Button(btn_frame, text="✏️ Edit Account", 
+        self.edit_btn = ttk.Button(row2_frame, text="✏️ Edit Account", 
                                    command=self.edit_account, state=tk.DISABLED)
-        self.edit_btn.pack(fill=tk.X, pady=2)
+        self.edit_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        
+        # Third row - Delete button
+        row3_frame = ttk.Frame(btn_frame)
+        row3_frame.pack(fill=tk.X, pady=2)
+        
+        self.delete_btn = ttk.Button(row3_frame, text="🗑️ Delete Account", 
+                                     command=self.delete_account, state=tk.DISABLED)
+        self.delete_btn.pack(fill=tk.X, padx=2)
         
         # Strength meter
         self.strength_frame = ttk.Frame(right_frame)
         self.strength_frame.pack(fill=tk.X, pady=10)
         
         ttk.Label(self.strength_frame, text="Password Strength:").pack()
-        self.strength_bar = ttk.Progressbar(self.strength_frame, length=200, mode='determinate')
+        self.strength_bar = ttk.Progressbar(self.strength_frame, length=300, mode='determinate')
         self.strength_bar.pack(pady=5)
         self.strength_label = ttk.Label(self.strength_frame, text="")
         self.strength_label.pack()
         
-        # Delete button (with confirmation)
-        self.delete_btn = ttk.Button(right_frame, text="🗑️ Delete Account", 
-                                     command=self.delete_account, state=tk.DISABLED)
-        self.delete_btn.pack(fill=tk.X, pady=2)
-        
         # Status bar
         self.status_var = tk.StringVar()
         self.status_var.set("Ready")
-        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN)
+        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+    
+    def show_intro(self):
+        """Show introduction information"""
+        # Update stats
+        account_count = len(accounts)
+        self.stats_label.config(text=f"📊 {account_count} saved account(s)")
+        
+        # Check for reused passwords
+        reused = detect_password_reuse()
+        if reused:
+            self.status_var.set(f"⚠️ {len(reused)} reused password(s) detected")
+        
+        # Random tip of the day
+        tips = [
+            "💡 Tip: Use 12+ characters for strong passwords",
+            "💡 Tip: Mix uppercase, lowercase, numbers, symbols",
+            "💡 Tip: Never reuse passwords across accounts",
+            "💡 Tip: Search accounts by typing in the search box",
+            "💡 Tip: Double-click an account to view details",
+            "💡 Tip: You must click 'Show Password' to reveal passwords",
+            "💡 Tip: Use Ctrl+N to quickly add a new account",
+            "💡 Tip: Check Tools menu for password reports"
+        ]
+        self.tip_label.config(text=random.choice(tips))
+    
+    def set_category_filter(self, category):
+        """Set category filter from menu"""
+        self.category_var.set(category)
+        self.filter_list()
     
     def refresh_list(self):
         """Refresh the account list"""
@@ -446,7 +321,7 @@ class GateKeeperGUI:
             display_text = f"{nickname} - {data['app']} [{data['category']}]"
             self.accounts_list.insert(tk.END, display_text)
         
-        self.status_var.set(f"Total: {len(accounts)} accounts")
+        self.show_intro()
     
     def filter_list(self, *args):
         """Filter accounts based on search term and category"""
@@ -492,18 +367,37 @@ class GateKeeperGUI:
             self.current_account = nickname
             self.display_account_details(nickname)
             
-            # Enable buttons
-            self.copy_btn.config(state=tk.NORMAL)
+            # Enable buttons (but view and copy are password-protected)
             self.toggle_btn.config(state=tk.NORMAL)
             self.edit_btn.config(state=tk.NORMAL)
             self.delete_btn.config(state=tk.NORMAL)
+            
+            # View and copy buttons require password reveal first
+            self.update_protected_buttons()
+    
+    def update_protected_buttons(self):
+        """Update the state of password-protected buttons"""
+        if self.password_revealed:
+            self.view_btn.config(state=tk.NORMAL)
+            self.copy_btn.config(state=tk.NORMAL)
+            self.security_label.config(text="Password revealed - you can now view/copy", foreground='green')
+        else:
+            self.view_btn.config(state=tk.DISABLED)
+            self.copy_btn.config(state=tk.DISABLED)
+            self.security_label.config(text="Click 'Show Password' to reveal", foreground='gray')
     
     def display_account_details(self, nickname):
         """Display account details in the text area"""
         data = accounts[nickname]
         
         # Show/hide password based on toggle
-        password_display = data['password'] if self.show_passwords else "•" * len(data['password'])
+        if self.show_passwords:
+            password_display = data['password']
+        else:
+            password_display = "•" * len(data['password'])
+            # Reset password revealed flag when hiding
+            self.password_revealed = False
+            self.update_protected_buttons()
         
         details = f"Nickname: {nickname}\n"
         details += f"App: {data['app']}\n"
@@ -530,21 +424,187 @@ class GateKeeperGUI:
         else:
             self.toggle_btn.config(text="👁️ Show Password")
     
+    def view_account_details(self):
+        """Show account details in a new window"""
+        if not self.current_account:
+            return
+        
+        # Check if password has been revealed
+        if not self.password_revealed:
+            messagebox.showwarning("Access Denied", "You must click 'Show Password' first to view details.")
+            return
+        
+        data = accounts[self.current_account]
+        
+        details = f"🔐 Account Details\n"
+        details += "═" * 40 + "\n\n"
+        details += f"📝 Nickname: {self.current_account}\n"
+        details += f"📱 App: {data['app']}\n"
+        details += f"📂 Category: {data['category']}\n"
+        details += f"🔑 Password: {data['password']}\n"
+        details += f"📅 Created: {data.get('created', 'Unknown')}\n"
+        details += f"🕒 Modified: {data.get('last_modified', 'Unknown')}"
+        
+        messagebox.showinfo("Account Details", details)
+    
     def copy_password(self):
         """Copy password to clipboard using pyperclip"""
-        if self.current_account and self.current_account in accounts:
-            password = accounts[self.current_account]['password']
-            try:
-                pyperclip.copy(password)
-                self.status_var.set("✓ Password copied to clipboard!")
-            except Exception as e:
-                self.status_var.set(f"❌ Copy failed: {str(e)}")
+        if not self.current_account or self.current_account not in accounts:
+            return
+        
+        # Check if password has been revealed
+        if not self.password_revealed:
+            messagebox.showwarning("Access Denied", "You must click 'Show Password' first to copy password.")
+            return
+        
+        password = accounts[self.current_account]['password']
+        try:
+            pyperclip.copy(password)
+            self.status_var.set("✓ Password copied to clipboard!")
+        except Exception as e:
+            self.status_var.set(f"❌ Copy failed: {str(e)}")
     
     def toggle_password(self):
         """Toggle password visibility"""
         self.show_passwords = not self.show_passwords
+        
+        if self.show_passwords:
+            # Ask for confirmation before revealing password
+            result = messagebox.askyesno(
+                "Security Confirmation",
+                "Are you sure you want to reveal this password?\n\nMake sure no one is looking at your screen."
+            )
+            
+            if result:
+                self.password_revealed = True
+            else:
+                self.show_passwords = False
+                self.password_revealed = False
+        else:
+            self.password_revealed = False
+        
         if self.current_account:
             self.display_account_details(self.current_account)
+            self.update_protected_buttons()
+    
+    def add_account_dialog(self):
+        """Open dialog to add a new account"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Add New Account")
+        dialog.geometry("450x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="Add New Account", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        frame = ttk.Frame(dialog, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Nickname
+        ttk.Label(frame, text="Nickname:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        nickname_var = tk.StringVar()
+        nickname_entry = ttk.Entry(frame, textvariable=nickname_var, width=30)
+        nickname_entry.grid(row=0, column=1, pady=5)
+        
+        # App name
+        ttk.Label(frame, text="App Name:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        app_var = tk.StringVar()
+        app_entry = ttk.Entry(frame, textvariable=app_var, width=30)
+        app_entry.grid(row=1, column=1, pady=5)
+        
+        # Category
+        ttk.Label(frame, text="Category:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        category_var = tk.StringVar(value="Personal")
+        category_combo = ttk.Combobox(frame, textvariable=category_var,
+                                       values=["Academic", "Personal", "Internship", "Other"],
+                                       state="readonly", width=27)
+        category_combo.grid(row=2, column=1, pady=5)
+        
+        # Password option
+        ttk.Label(frame, text="Password:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        
+        password_frame = ttk.Frame(frame)
+        password_frame.grid(row=3, column=1, pady=5)
+        
+        password_var = tk.StringVar()
+        password_entry = ttk.Entry(password_frame, textvariable=password_var, width=20, show="•")
+        password_entry.pack(side=tk.LEFT)
+        
+        def generate_and_set():
+            password_var.set(generate_password())
+            password_entry.config(show="")
+        
+        ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
+        
+        # Show password checkbox
+        show_pwd_var = tk.BooleanVar()
+        def toggle_password_visibility():
+            if show_pwd_var.get():
+                password_entry.config(show="")
+            else:
+                password_entry.config(show="•")
+        
+        ttk.Checkbutton(frame, text="Show password", variable=show_pwd_var, 
+                       command=toggle_password_visibility).grid(row=4, column=0, columnspan=2, pady=5)
+        
+        # Buttons
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        
+        def save_account():
+            nickname = nickname_var.get().strip()
+            app = app_var.get().strip()
+            category = category_var.get()
+            password = password_var.get().strip()
+            
+            if not nickname or not app or not password:
+                messagebox.showerror("Error", "All fields are required!")
+                return
+            
+            # Normalize category
+            if category.lower() in ["academic", "personal", "internship"]:
+                category = category.lower().capitalize()
+            else:
+                category = "Other"
+            
+            # Check for duplicate data
+            duplicate_found = False
+            duplicate_nicknames = []
+            
+            for existing_nick, existing_data in accounts.items():
+                if (existing_data["app"] == app and 
+                    existing_data["category"] == category and 
+                    existing_data["password"] == password):
+                    duplicate_found = True
+                    duplicate_nicknames.append(existing_nick)
+            
+            if duplicate_found:
+                dup_list = "\n".join([f"  • {dup}" for dup in duplicate_nicknames])
+                result = messagebox.askyesno(
+                    "Duplicate Found",
+                    f"⚠️ An account with the exact same data already exists under:\n{dup_list}\n\nSave anyway?"
+                )
+                if not result:
+                    return
+            
+            # Save account
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+            
+            accounts[nickname] = {
+                "app": app,
+                "category": category,
+                "password": password,
+                "created": current_time,
+                "last_modified": current_time
+            }
+            
+            save_accounts()
+            self.refresh_list()
+            dialog.destroy()
+            self.status_var.set(f"✓ Account '{nickname}' saved")
+        
+        ttk.Button(button_frame, text="Save", command=save_account).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def edit_account(self):
         """Edit the selected account"""
@@ -554,14 +614,13 @@ class GateKeeperGUI:
         # Create edit dialog
         edit_window = tk.Toplevel(self.root)
         edit_window.title("Edit Account")
-        edit_window.geometry("450x350")
+        edit_window.geometry("450x400")
         edit_window.transient(self.root)
         edit_window.grab_set()
         
         # Get current data
         current_data = accounts[self.current_account]
         
-        # Create form
         ttk.Label(edit_window, text="Edit Account", font=('Arial', 14, 'bold')).pack(pady=10)
         
         frame = ttk.Frame(edit_window, padding="20")
@@ -587,9 +646,19 @@ class GateKeeperGUI:
         
         # Password
         ttk.Label(frame, text="Password:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        
+        password_frame = ttk.Frame(frame)
+        password_frame.grid(row=3, column=1, pady=5)
+        
         password_var = tk.StringVar(value=current_data['password'])
-        password_entry = ttk.Entry(frame, textvariable=password_var, width=30, show="•")
-        password_entry.grid(row=3, column=1, pady=5)
+        password_entry = ttk.Entry(password_frame, textvariable=password_var, width=20, show="•")
+        password_entry.pack(side=tk.LEFT)
+        
+        def generate_and_set():
+            password_var.set(generate_password())
+            password_entry.config(show="")
+        
+        ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
         
         # Show password checkbox
         show_pwd_var = tk.BooleanVar()
@@ -644,6 +713,7 @@ class GateKeeperGUI:
             self.details_text.config(state=tk.DISABLED)
             
             # Disable buttons
+            self.view_btn.config(state=tk.DISABLED)
             self.copy_btn.config(state=tk.DISABLED)
             self.toggle_btn.config(state=tk.DISABLED)
             self.edit_btn.config(state=tk.DISABLED)
@@ -654,40 +724,94 @@ class GateKeeperGUI:
             self.strength_label.config(text="")
             
             self.status_var.set("✓ Account deleted")
+    
+    def show_password_reuse(self):
+        """Show password reuse report in a new window"""
+        reused = detect_password_reuse()
+        
+        report_window = tk.Toplevel(self.root)
+        report_window.title("Password Reuse Report")
+        report_window.geometry("500x400")
+        report_window.transient(self.root)
+        
+        ttk.Label(report_window, text="Password Reuse Report", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        if not reused:
+            ttk.Label(report_window, text="✅ No password reuse detected!").pack(pady=20)
+        else:
+            # Create text widget with scrollbar
+            frame = ttk.Frame(report_window)
+            frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            
+            scrollbar = ttk.Scrollbar(frame)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            text_widget = tk.Text(frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+            text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            
+            scrollbar.config(command=text_widget.yview)
+            
+            # Add content
+            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n")
+            
+            for item in reused:
+                text_widget.insert(tk.END, f"Password: {item['password']}\n")
+                text_widget.insert(tk.END, f"Used in {item['count']} accounts:\n")
+                for acc in item['accounts']:
+                    text_widget.insert(tk.END, f"  • {acc} ({accounts[acc]['app']})\n")
+                text_widget.insert(tk.END, "\n" + "-"*40 + "\n\n")
+            
+            text_widget.config(state=tk.DISABLED)
+        
+        ttk.Button(report_window, text="Close", command=report_window.destroy).pack(pady=10)
+    
+    def show_password_generator(self):
+        """Show password generator tool"""
+        pwd = generate_password()
+        
+        result = messagebox.askyesno(
+            "Password Generator",
+            f"Generated password:\n\n{pwd}\n\nCopy to clipboard?"
+        )
+        
+        if result:
+            try:
+                pyperclip.copy(pwd)
+                self.status_var.set("✓ Password copied to clipboard!")
+            except Exception as e:
+                self.status_var.set(f"❌ Copy failed: {str(e)}")
+    
+    def show_about(self):
+        """Show about dialog"""
+        about_text = "GateKeeper Password Manager\n\n"
+        about_text += "Version 2.3.0\n\n"
+        about_text += "Your personal password manager\n"
+        about_text += "Securely store and manage all your accounts\n\n"
+        about_text += "© 2026 GateKeeper Team\n"
+        about_text += "AI tools used responsibly to support learning"
+        
+        messagebox.showinfo("About GateKeeper", about_text)
+    
+    def show_storage_warning(self):
+        """Show storage warning"""
+        warning_text = "⚠️ LOCAL STORAGE ONLY ⚠️\n\n"
+        warning_text += "Your accounts are saved ONLY on this device.\n"
+        warning_text += "If you delete this program or its files,\n"
+        warning_text += "ALL your saved accounts will be PERMANENTLY LOST.\n\n"
+        warning_text += "Consider backing up your accounts.json file\n"
+        warning_text += "if you need to keep your data safe."
+        
+        messagebox.showwarning("Storage Warning", warning_text)
 
-def launch_gui():
-    """Launch enhanced GUI"""
+# ============================================================================
+# MAIN ENTRY POINT
+# ============================================================================
+
+def main():
+    """Main entry point - launches GUI directly"""
     root = tk.Tk()
     app = GateKeeperGUI(root)
     root.mainloop()
 
-# Show introduction menu
-show_intro()
-
-while True:
-    print(f"\nGATEKEEPER MENU")
-    print(SEPARATOR)
-    print("1. Add Account")
-    print("2. View Accounts")
-    print("3. Access Account")
-    print("4. Check Password Reuse")
-    print("5. Launch GUI")
-    print("6. Exit")
-
-    choice = input("\nChoice: ")
-
-    if choice == "1":
-        add_account()
-    elif choice == "2":
-        view_accounts()
-    elif choice == "3":
-        access_account()
-    elif choice == "4":
-        show_password_reuse()
-    elif choice == "5":
-        launch_gui()
-    elif choice == "6":
-        print("\nGoodbye!\n")
-        break
-    else:
-        print("Invalid option")
+if __name__ == "__main__":
+    main()
