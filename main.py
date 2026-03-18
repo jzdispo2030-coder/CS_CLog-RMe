@@ -320,7 +320,7 @@ def show_password_reuse():
     print(f"\n⚠️  Use unique passwords for better security")
 
 # ============================================================================
-# ENHANCED GUI WITH PYPERCLIP
+# ENHANCED GUI WITH PYPERCLIP AND EDIT FEATURE
 # ============================================================================
 
 class GateKeeperGUI:
@@ -408,6 +408,11 @@ class GateKeeperGUI:
                                      command=self.toggle_password, state=tk.DISABLED)
         self.toggle_btn.pack(fill=tk.X, pady=2)
         
+        # Edit button
+        self.edit_btn = ttk.Button(btn_frame, text="✏️ Edit Account", 
+                                   command=self.edit_account, state=tk.DISABLED)
+        self.edit_btn.pack(fill=tk.X, pady=2)
+        
         # Strength meter
         self.strength_frame = ttk.Frame(right_frame)
         self.strength_frame.pack(fill=tk.X, pady=10)
@@ -490,6 +495,7 @@ class GateKeeperGUI:
             # Enable buttons
             self.copy_btn.config(state=tk.NORMAL)
             self.toggle_btn.config(state=tk.NORMAL)
+            self.edit_btn.config(state=tk.NORMAL)
             self.delete_btn.config(state=tk.NORMAL)
     
     def display_account_details(self, nickname):
@@ -540,6 +546,82 @@ class GateKeeperGUI:
         if self.current_account:
             self.display_account_details(self.current_account)
     
+    def edit_account(self):
+        """Edit the selected account"""
+        if not self.current_account:
+            return
+        
+        # Create edit dialog
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title("Edit Account")
+        edit_window.geometry("450x350")
+        edit_window.transient(self.root)
+        edit_window.grab_set()
+        
+        # Get current data
+        current_data = accounts[self.current_account]
+        
+        # Create form
+        ttk.Label(edit_window, text="Edit Account", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        frame = ttk.Frame(edit_window, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Nickname (read-only)
+        ttk.Label(frame, text="Nickname:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(frame, text=self.current_account, font=('Arial', 10, 'bold')).grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        # App name
+        ttk.Label(frame, text="App Name:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        app_var = tk.StringVar(value=current_data['app'])
+        app_entry = ttk.Entry(frame, textvariable=app_var, width=30)
+        app_entry.grid(row=1, column=1, pady=5)
+        
+        # Category
+        ttk.Label(frame, text="Category:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        category_var = tk.StringVar(value=current_data['category'])
+        category_combo = ttk.Combobox(frame, textvariable=category_var,
+                                       values=["Academic", "Personal", "Internship", "Other"],
+                                       state="readonly", width=27)
+        category_combo.grid(row=2, column=1, pady=5)
+        
+        # Password
+        ttk.Label(frame, text="Password:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        password_var = tk.StringVar(value=current_data['password'])
+        password_entry = ttk.Entry(frame, textvariable=password_var, width=30, show="•")
+        password_entry.grid(row=3, column=1, pady=5)
+        
+        # Show password checkbox
+        show_pwd_var = tk.BooleanVar()
+        def toggle_password_visibility():
+            if show_pwd_var.get():
+                password_entry.config(show="")
+            else:
+                password_entry.config(show="•")
+        
+        ttk.Checkbutton(frame, text="Show password", variable=show_pwd_var, 
+                       command=toggle_password_visibility).grid(row=4, column=0, columnspan=2, pady=5)
+        
+        # Buttons
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        
+        def save_changes():
+            # Update the account
+            accounts[self.current_account]['app'] = app_var.get()
+            accounts[self.current_account]['category'] = category_var.get()
+            accounts[self.current_account]['password'] = password_var.get()
+            accounts[self.current_account]['last_modified'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            
+            save_accounts()
+            self.display_account_details(self.current_account)
+            self.refresh_list()
+            edit_window.destroy()
+            self.status_var.set("✓ Account updated")
+        
+        ttk.Button(button_frame, text="Save", command=save_changes).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=edit_window.destroy).pack(side=tk.LEFT, padx=5)
+    
     def delete_account(self):
         """Delete current account with confirmation"""
         if not self.current_account:
@@ -564,6 +646,7 @@ class GateKeeperGUI:
             # Disable buttons
             self.copy_btn.config(state=tk.DISABLED)
             self.toggle_btn.config(state=tk.DISABLED)
+            self.edit_btn.config(state=tk.DISABLED)
             self.delete_btn.config(state=tk.DISABLED)
             
             # Reset strength meter
