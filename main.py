@@ -237,11 +237,11 @@ class GateKeeperGUI:
         row1_frame.pack(fill=tk.X, pady=2)
         
         self.view_btn = ttk.Button(row1_frame, text="👁️ View Details", 
-                                   command=self.view_account_details, state=tk.DISABLED)
+                                   command=self.view_account_details, state=tk.NORMAL)
         self.view_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         self.copy_btn = ttk.Button(row1_frame, text="📋 Copy Password", 
-                                   command=self.copy_password, state=tk.DISABLED)
+                                   command=self.copy_password, state=tk.NORMAL)
         self.copy_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         # Second row of buttons
@@ -367,24 +367,12 @@ class GateKeeperGUI:
             self.current_account = nickname
             self.display_account_details(nickname)
             
-            # Enable buttons (but view and copy are password-protected)
+            # Enable ALL buttons when account is selected
+            self.view_btn.config(state=tk.NORMAL)
+            self.copy_btn.config(state=tk.NORMAL)
             self.toggle_btn.config(state=tk.NORMAL)
             self.edit_btn.config(state=tk.NORMAL)
             self.delete_btn.config(state=tk.NORMAL)
-            
-            # View and copy buttons require password reveal first
-            self.update_protected_buttons()
-    
-    def update_protected_buttons(self):
-        """Update the state of password-protected buttons"""
-        if self.password_revealed:
-            self.view_btn.config(state=tk.NORMAL)
-            self.copy_btn.config(state=tk.NORMAL)
-            self.security_label.config(text="Password revealed - you can now view/copy", foreground='green')
-        else:
-            self.view_btn.config(state=tk.DISABLED)
-            self.copy_btn.config(state=tk.DISABLED)
-            self.security_label.config(text="Click 'Show Password' to reveal", foreground='gray')
     
     def display_account_details(self, nickname):
         """Display account details in the text area"""
@@ -395,9 +383,6 @@ class GateKeeperGUI:
             password_display = data['password']
         else:
             password_display = "•" * len(data['password'])
-            # Reset password revealed flag when hiding
-            self.password_revealed = False
-            self.update_protected_buttons()
         
         details = f"Nickname: {nickname}\n"
         details += f"App: {data['app']}\n"
@@ -411,27 +396,49 @@ class GateKeeperGUI:
         self.details_text.insert(1.0, details)
         self.details_text.config(state=tk.DISABLED)
         
-        # Update strength meter
+        # Update strength meter - FIXED: Handle score 0-5 correctly
         score, _ = check_password_strength(data['password'])
+        # Convert score 0-5 to percentage 0-100
         self.strength_bar['value'] = (score / 5) * 100
         
-        strength_texts = ["Very Weak", "Weak", "Fair", "Good", "Strong"]
-        self.strength_label.config(text=strength_texts[score])
+        # FIXED: Map score to correct text (0-5)
+        if score == 0:
+            strength_text = "Very Weak"
+        elif score == 1:
+            strength_text = "Weak"
+        elif score == 2:
+            strength_text = "Fair"
+        elif score == 3:
+            strength_text = "Good"
+        elif score == 4:
+            strength_text = "Strong"
+        elif score == 5:
+            strength_text = "Very Strong"
+        else:
+            strength_text = "Unknown"
+        
+        self.strength_label.config(text=strength_text)
         
         # Update toggle button text
         if self.show_passwords:
             self.toggle_btn.config(text="👁️ Hide Password")
+            self.security_label.config(text="Password revealed - you can now view/copy", foreground='green')
         else:
             self.toggle_btn.config(text="👁️ Show Password")
+            self.security_label.config(text="Click 'Show Password' to reveal", foreground='gray')
     
     def view_account_details(self):
         """Show account details in a new window"""
         if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
         # Check if password has been revealed
-        if not self.password_revealed:
-            messagebox.showwarning("Access Denied", "You must click 'Show Password' first to view details.")
+        if not self.show_passwords:
+            messagebox.showwarning(
+                "Password Hidden", 
+                "🔒 Password is hidden.\n\nPlease click 'Show Password' first to reveal the password before viewing details."
+            )
             return
         
         data = accounts[self.current_account]
@@ -449,26 +456,36 @@ class GateKeeperGUI:
     
     def copy_password(self):
         """Copy password to clipboard using pyperclip"""
-        if not self.current_account or self.current_account not in accounts:
+        if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
         # Check if password has been revealed
-        if not self.password_revealed:
-            messagebox.showwarning("Access Denied", "You must click 'Show Password' first to copy password.")
+        if not self.show_passwords:
+            messagebox.showwarning(
+                "Password Hidden", 
+                "🔒 Password is hidden.\n\nPlease click 'Show Password' first to reveal the password before copying."
+            )
             return
         
         password = accounts[self.current_account]['password']
         try:
             pyperclip.copy(password)
             self.status_var.set("✓ Password copied to clipboard!")
+            
+            # Show success message
+            messagebox.showinfo("Success", "Password copied to clipboard!")
         except Exception as e:
             self.status_var.set(f"❌ Copy failed: {str(e)}")
+            messagebox.showerror("Error", f"Failed to copy password: {str(e)}")
     
     def toggle_password(self):
         """Toggle password visibility"""
-        self.show_passwords = not self.show_passwords
+        if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
+            return
         
-        if self.show_passwords:
+        if not self.show_passwords:
             # Ask for confirmation before revealing password
             result = messagebox.askyesno(
                 "Security Confirmation",
@@ -476,22 +493,20 @@ class GateKeeperGUI:
             )
             
             if result:
-                self.password_revealed = True
+                self.show_passwords = True
             else:
-                self.show_passwords = False
-                self.password_revealed = False
+                return
         else:
-            self.password_revealed = False
+            self.show_passwords = False
         
         if self.current_account:
             self.display_account_details(self.current_account)
-            self.update_protected_buttons()
     
     def add_account_dialog(self):
         """Open dialog to add a new account"""
         dialog = tk.Toplevel(self.root)
         dialog.title("Add New Account")
-        dialog.geometry("450x400")
+        dialog.geometry("450x450")
         dialog.transient(self.root)
         dialog.grab_set()
         
@@ -533,6 +548,7 @@ class GateKeeperGUI:
         def generate_and_set():
             password_var.set(generate_password())
             password_entry.config(show="")
+            show_pwd_var.set(True)
         
         ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
         
@@ -567,6 +583,15 @@ class GateKeeperGUI:
             else:
                 category = "Other"
             
+            # Check if nickname already exists
+            if nickname in accounts:
+                result = messagebox.askyesno(
+                    "Duplicate Nickname",
+                    f"An account with nickname '{nickname}' already exists.\n\nDo you want to overwrite it?"
+                )
+                if not result:
+                    return
+            
             # Check for duplicate data
             duplicate_found = False
             duplicate_nicknames = []
@@ -574,7 +599,8 @@ class GateKeeperGUI:
             for existing_nick, existing_data in accounts.items():
                 if (existing_data["app"] == app and 
                     existing_data["category"] == category and 
-                    existing_data["password"] == password):
+                    existing_data["password"] == password and
+                    existing_nick != nickname):  # Don't compare with itself if overwriting
                     duplicate_found = True
                     duplicate_nicknames.append(existing_nick)
             
@@ -605,16 +631,20 @@ class GateKeeperGUI:
         
         ttk.Button(button_frame, text="Save", command=save_account).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+        
+        # Focus on nickname entry
+        nickname_entry.focus()
     
     def edit_account(self):
         """Edit the selected account"""
         if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
         # Create edit dialog
         edit_window = tk.Toplevel(self.root)
         edit_window.title("Edit Account")
-        edit_window.geometry("450x400")
+        edit_window.geometry("450x450")
         edit_window.transient(self.root)
         edit_window.grab_set()
         
@@ -657,6 +687,7 @@ class GateKeeperGUI:
         def generate_and_set():
             password_var.set(generate_password())
             password_entry.config(show="")
+            show_pwd_var.set(True)
         
         ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
         
@@ -694,6 +725,7 @@ class GateKeeperGUI:
     def delete_account(self):
         """Delete current account with confirmation"""
         if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
         result = messagebox.askyesno(
@@ -712,9 +744,12 @@ class GateKeeperGUI:
             self.details_text.delete(1.0, tk.END)
             self.details_text.config(state=tk.DISABLED)
             
+            # Reset password visibility
+            self.show_passwords = False
+            
             # Disable buttons
-            self.view_btn.config(state=tk.DISABLED)
-            self.copy_btn.config(state=tk.DISABLED)
+            self.view_btn.config(state=tk.NORMAL)  # Keep enabled but will show warning
+            self.copy_btn.config(state=tk.NORMAL)  # Keep enabled but will show warning
             self.toggle_btn.config(state=tk.DISABLED)
             self.edit_btn.config(state=tk.DISABLED)
             self.delete_btn.config(state=tk.DISABLED)
@@ -722,6 +757,9 @@ class GateKeeperGUI:
             # Reset strength meter
             self.strength_bar['value'] = 0
             self.strength_label.config(text="")
+            
+            # Reset security label
+            self.security_label.config(text="Click 'Show Password' to reveal", foreground='gray')
             
             self.status_var.set("✓ Account deleted")
     
@@ -778,8 +816,10 @@ class GateKeeperGUI:
             try:
                 pyperclip.copy(pwd)
                 self.status_var.set("✓ Password copied to clipboard!")
+                messagebox.showinfo("Success", "Password copied to clipboard!")
             except Exception as e:
                 self.status_var.set(f"❌ Copy failed: {str(e)}")
+                messagebox.showerror("Error", f"Failed to copy password: {str(e)}")
     
     def show_about(self):
         """Show about dialog"""
