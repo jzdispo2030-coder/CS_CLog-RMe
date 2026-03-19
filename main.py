@@ -6,7 +6,7 @@ import random
 import string
 from datetime import datetime
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox
 
 # Pyperclip is included directly in the project (see pyperclip.py file)
 # Licensed under BSD-3-Clause - see LICENSE-pyperclip.txt
@@ -33,7 +33,7 @@ def generate_password(length=20):
     
     while True:
         password = ''.join(random.choice(chars) for _ in range(length))
-        score, _, _, _ = check_password_strength(password)
+        score, _ = check_password_strength(password)
         if score >= 8:  # Aim for very strong passwords
             return password
 
@@ -247,7 +247,7 @@ class GateKeeperGUI:
         strengths_frame.pack(fill=tk.X, pady=5)
         
         ttk.Label(strengths_frame, text="✅ Strengths:", font=('Arial', 9, 'bold')).pack(anchor=tk.W)
-        self.strengths_list = tk.Text(strengths_frame, height=3, width=40, font=('Arial', 8), 
+        self.strengths_list = tk.Text(strengths_frame, height=2, width=40, font=('Arial', 8), 
                                       wrap=tk.WORD, bg='#f0fff0', fg='#27ae60')
         self.strengths_list.pack(fill=tk.X, pady=2)
         self.strengths_list.config(state=tk.DISABLED)
@@ -257,7 +257,7 @@ class GateKeeperGUI:
         issues_frame.pack(fill=tk.X, pady=5)
         
         ttk.Label(issues_frame, text="⚠️ Issues to fix:", font=('Arial', 9, 'bold')).pack(anchor=tk.W)
-        self.issues_list = tk.Text(issues_frame, height=3, width=40, font=('Arial', 8),
+        self.issues_list = tk.Text(issues_frame, height=2, width=40, font=('Arial', 8),
                                    wrap=tk.WORD, bg='#fff0f0', fg='#e74c3c')
         self.issues_list.pack(fill=tk.X, pady=2)
         self.issues_list.config(state=tk.DISABLED)
@@ -271,11 +271,11 @@ class GateKeeperGUI:
         row1_frame.pack(fill=tk.X, pady=2)
         
         self.view_btn = ttk.Button(row1_frame, text="👁️ View Details", 
-                                   command=self.view_account_details)
+                                   command=self.view_account_details, state=tk.NORMAL)
         self.view_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         self.copy_btn = ttk.Button(row1_frame, text="📋 Copy Password", 
-                                   command=self.copy_password)
+                                   command=self.copy_password, state=tk.NORMAL)
         self.copy_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         # Second row
@@ -463,6 +463,14 @@ class GateKeeperGUI:
             messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
+        # Check if password has been revealed
+        if not self.show_passwords:
+            messagebox.showwarning(
+                "Password Hidden", 
+                "🔒 Password is hidden.\n\nPlease click 'Show Password' first to reveal the password before viewing details."
+            )
+            return
+        
         data = accounts[self.current_account]
         
         # Get feedback for display
@@ -531,15 +539,23 @@ class GateKeeperGUI:
         """Open dialog to add a new account"""
         dialog = tk.Toplevel(self.root)
         dialog.title("Add New Account")
-        dialog.geometry("500x550")
+        dialog.geometry("550x600")
         dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Make dialog modal
+        dialog.focus_set()
         dialog.grab_set()
         
         ttk.Label(dialog, text="Add New Account", font=('Arial', 16, 'bold')).pack(pady=10)
         
-        # Main frame with scrollbar for better UX
-        canvas = tk.Canvas(dialog)
-        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        # Main frame
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create a canvas with scrollbar for the form
+        canvas = tk.Canvas(main_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
         scrollable_frame.bind(
@@ -554,8 +570,8 @@ class GateKeeperGUI:
         scrollbar.pack(side="right", fill="y")
         
         # Form fields
-        frame = ttk.Frame(scrollable_frame, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
+        frame = ttk.Frame(scrollable_frame)
+        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Nickname
         ttk.Label(frame, text="Nickname:", font=('Arial', 10)).grid(row=0, column=0, sticky=tk.W, pady=8)
@@ -613,7 +629,7 @@ class GateKeeperGUI:
         strength_preview_frame = ttk.LabelFrame(frame, text="Password Strength Preview", padding="10")
         strength_preview_frame.grid(row=5, column=0, columnspan=2, pady=15, sticky=tk.EW)
         
-        preview_bar = ttk.Progressbar(strength_preview_frame, length=350, mode='determinate')
+        preview_bar = ttk.Progressbar(strength_preview_frame, length=400, mode='determinate')
         preview_bar.pack(pady=5)
         
         preview_label = ttk.Label(strength_preview_frame, text="", font=('Arial', 10, 'bold'))
@@ -621,6 +637,18 @@ class GateKeeperGUI:
         
         preview_crack = ttk.Label(strength_preview_frame, text="", font=('Arial', 8))
         preview_crack.pack()
+        
+        # Strengths preview
+        preview_strengths = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
+                                    bg='#f0fff0', fg='#27ae60', wrap=tk.WORD)
+        preview_strengths.pack(fill=tk.X, pady=2)
+        preview_strengths.config(state=tk.DISABLED)
+        
+        # Issues preview
+        preview_issues = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
+                                 bg='#fff0f0', fg='#e74c3c', wrap=tk.WORD)
+        preview_issues.pack(fill=tk.X, pady=2)
+        preview_issues.config(state=tk.DISABLED)
         
         def update_strength(*args):
             pwd = password_var.get()
@@ -631,10 +659,38 @@ class GateKeeperGUI:
                                     foreground=feedback['color'])
                 crack_time = estimate_crack_time(pwd)
                 preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
+                
+                # Update strengths
+                preview_strengths.config(state=tk.NORMAL)
+                preview_strengths.delete(1.0, tk.END)
+                if feedback['strengths']:
+                    for s in feedback['strengths']:
+                        preview_strengths.insert(tk.END, f"• {s}\n")
+                else:
+                    preview_strengths.insert(tk.END, "• No notable strengths\n")
+                preview_strengths.config(state=tk.DISABLED)
+                
+                # Update issues
+                preview_issues.config(state=tk.NORMAL)
+                preview_issues.delete(1.0, tk.END)
+                if feedback['issues']:
+                    for issue in feedback['issues']:
+                        preview_issues.insert(tk.END, f"• {issue}\n")
+                else:
+                    preview_issues.insert(tk.END, "• No issues found - Excellent!\n")
+                preview_issues.config(state=tk.DISABLED)
             else:
                 preview_bar['value'] = 0
                 preview_label.config(text="Enter a password")
                 preview_crack.config(text="")
+                
+                preview_strengths.config(state=tk.NORMAL)
+                preview_strengths.delete(1.0, tk.END)
+                preview_strengths.config(state=tk.DISABLED)
+                
+                preview_issues.config(state=tk.NORMAL)
+                preview_issues.delete(1.0, tk.END)
+                preview_issues.config(state=tk.DISABLED)
         
         # Trace password changes
         password_var.trace('w', update_strength)
@@ -720,7 +776,7 @@ class GateKeeperGUI:
         # Create edit dialog
         edit_window = tk.Toplevel(self.root)
         edit_window.title("Edit Account")
-        edit_window.geometry("500x550")
+        edit_window.geometry("550x600")
         edit_window.transient(self.root)
         edit_window.grab_set()
         
@@ -729,8 +785,29 @@ class GateKeeperGUI:
         
         ttk.Label(edit_window, text="Edit Account", font=('Arial', 16, 'bold')).pack(pady=10)
         
-        frame = ttk.Frame(edit_window, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
+        # Main frame
+        main_frame = ttk.Frame(edit_window, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create a canvas with scrollbar
+        canvas = tk.Canvas(main_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Form fields
+        frame = ttk.Frame(scrollable_frame)
+        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Nickname (read-only)
         ttk.Label(frame, text="Nickname:", font=('Arial', 10)).grid(row=0, column=0, sticky=tk.W, pady=8)
@@ -784,7 +861,7 @@ class GateKeeperGUI:
         strength_preview_frame = ttk.LabelFrame(frame, text="Password Strength Preview", padding="10")
         strength_preview_frame.grid(row=5, column=0, columnspan=2, pady=15, sticky=tk.EW)
         
-        preview_bar = ttk.Progressbar(strength_preview_frame, length=350, mode='determinate')
+        preview_bar = ttk.Progressbar(strength_preview_frame, length=400, mode='determinate')
         preview_bar.pack(pady=5)
         
         preview_label = ttk.Label(strength_preview_frame, text="", font=('Arial', 10, 'bold'))
@@ -792,6 +869,18 @@ class GateKeeperGUI:
         
         preview_crack = ttk.Label(strength_preview_frame, text="", font=('Arial', 8))
         preview_crack.pack()
+        
+        # Strengths preview
+        preview_strengths = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
+                                    bg='#f0fff0', fg='#27ae60', wrap=tk.WORD)
+        preview_strengths.pack(fill=tk.X, pady=2)
+        preview_strengths.config(state=tk.DISABLED)
+        
+        # Issues preview
+        preview_issues = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
+                                 bg='#fff0f0', fg='#e74c3c', wrap=tk.WORD)
+        preview_issues.pack(fill=tk.X, pady=2)
+        preview_issues.config(state=tk.DISABLED)
         
         def update_strength(*args):
             pwd = password_var.get()
@@ -802,6 +891,26 @@ class GateKeeperGUI:
                                     foreground=feedback['color'])
                 crack_time = estimate_crack_time(pwd)
                 preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
+                
+                # Update strengths
+                preview_strengths.config(state=tk.NORMAL)
+                preview_strengths.delete(1.0, tk.END)
+                if feedback['strengths']:
+                    for s in feedback['strengths']:
+                        preview_strengths.insert(tk.END, f"• {s}\n")
+                else:
+                    preview_strengths.insert(tk.END, "• No notable strengths\n")
+                preview_strengths.config(state=tk.DISABLED)
+                
+                # Update issues
+                preview_issues.config(state=tk.NORMAL)
+                preview_issues.delete(1.0, tk.END)
+                if feedback['issues']:
+                    for issue in feedback['issues']:
+                        preview_issues.insert(tk.END, f"• {issue}\n")
+                else:
+                    preview_issues.insert(tk.END, "• No issues found - Excellent!\n")
+                preview_issues.config(state=tk.DISABLED)
             else:
                 preview_bar['value'] = 0
                 preview_label.config(text="Enter a password")
@@ -903,17 +1012,16 @@ class GateKeeperGUI:
             scrollbar.config(command=text_widget.yview)
             
             # Add content
-            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n", "warning")
+            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n")
             text_widget.tag_config("warning", foreground="red", font=('Arial', 11, 'bold'))
             
             for i, item in enumerate(reused, 1):
-                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n", "password")
-                text_widget.tag_config("password", foreground="blue", font=('Courier', 10, 'bold'))
+                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n")
                 text_widget.insert(tk.END, f"   Used in {item['count']} accounts:\n")
                 for acc in item['accounts']:
                     # Get strength for each account
-                    score, _, _, cat = check_password_strength(accounts[acc]['password'])
-                    text_widget.insert(tk.END, f"   • {acc} ({accounts[acc]['app']}) - {cat}\n")
+                    feedback = get_password_feedback(accounts[acc]['password'])
+                    text_widget.insert(tk.END, f"   • {acc} ({accounts[acc]['app']}) - {feedback['category']}\n")
                 text_widget.insert(tk.END, "\n" + "─"*50 + "\n")
             
             text_widget.config(state=tk.DISABLED)
@@ -961,9 +1069,9 @@ class GateKeeperGUI:
         categories = []
         
         for data in accounts.values():
-            score, _, _, cat = check_password_strength(data['password'])
-            scores.append(score)
-            categories.append(cat)
+            feedback = get_password_feedback(data['password'])
+            scores.append(feedback['score'])
+            categories.append(feedback['category'])
         
         avg_score = sum(scores) / total if total > 0 else 0
         
