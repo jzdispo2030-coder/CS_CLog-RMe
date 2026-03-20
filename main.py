@@ -327,8 +327,7 @@ class ShortcutsWindow(tk.Toplevel):
             tk.Label(f, text=key, bg=Theme.bg_input, fg=Theme.accent_info, font=("Segoe UI",9,"bold"), padx=8, pady=4).pack(side=tk.LEFT)
             tk.Label(f, text=action, bg=Theme.bg_secondary, fg=Theme.text_secondary).pack(side=tk.LEFT, padx=(15,0))
         RoundedButton(main, "Close", self.destroy, Theme.bg_input, width=100, height=35).pack(pady=15)
-
-class PasswordInspector(tk.Toplevel):
+        class PasswordInspector(tk.Toplevel):
     def __init__(self, parent, nickname, password):
         super().__init__(parent)
         self.parent = parent
@@ -360,7 +359,6 @@ class PasswordInspector(tk.Toplevel):
         tk.Label(info, text=f"Crack: {estimate_crack_time(self.password)}", bg=Theme.bg_secondary, fg=Theme.text_muted).pack(anchor=tk.W)
         notebook = ttk.Notebook(main)
         notebook.pack(fill=tk.BOTH, expand=True)
-        # Analysis tab
         a = tk.Frame(notebook, bg=Theme.bg_secondary)
         notebook.add(a, text="Analysis")
         has_lower = bool(re.search(r"[a-z]", self.password))
@@ -372,7 +370,6 @@ class PasswordInspector(tk.Toplevel):
             f.pack(fill=tk.X, pady=3, padx=10)
             tk.Label(f, text=label, width=15, bg=Theme.bg_secondary, fg=Theme.text_secondary).pack(side=tk.LEFT)
             tk.Label(f, text="✓ Yes" if present else "✗ No", bg=Theme.bg_secondary, fg=Theme.accent_success if present else Theme.accent_danger).pack(side=tk.LEFT)
-        # Strengths
         s = tk.Frame(notebook, bg=Theme.bg_secondary)
         notebook.add(s, text="Strengths")
         st = tk.Text(s, bg=Theme.bg_input, fg=Theme.accent_success, bd=0, padx=10, pady=10, font=Theme.small_font, wrap=tk.WORD)
@@ -381,7 +378,6 @@ class PasswordInspector(tk.Toplevel):
             for x in self.fb['strengths']: st.insert(tk.END, f"✓ {x}\n")
         else: st.insert(tk.END, "No notable strengths")
         st.config(state=tk.DISABLED)
-        # Issues
         i = tk.Frame(notebook, bg=Theme.bg_secondary)
         notebook.add(i, text="Issues & Fixes")
         it = tk.Text(i, bg=Theme.bg_input, fg=Theme.accent_danger, bd=0, padx=10, pady=10, font=Theme.small_font, wrap=tk.WORD)
@@ -396,7 +392,6 @@ class PasswordInspector(tk.Toplevel):
                 elif "short" in issue.lower(): it.insert(tk.END, "   💡 Make password longer (12+ chars)\n")
         else: it.insert(tk.END, "✅ No issues found!")
         it.config(state=tk.DISABLED)
-        # Suggestions
         g = tk.Frame(notebook, bg=Theme.bg_secondary)
         notebook.add(g, text="Suggestions")
         gt = tk.Text(g, bg=Theme.bg_input, fg=Theme.accent_info, bd=0, padx=10, pady=10, font=Theme.small_font, wrap=tk.WORD)
@@ -411,7 +406,6 @@ class PasswordInspector(tk.Toplevel):
             for s in sugg: gt.insert(tk.END, f"💡 {s}\n")
         else: gt.insert(tk.END, "✨ Looks great!")
         gt.config(state=tk.DISABLED)
-        # Actions
         act = tk.Frame(notebook, bg=Theme.bg_secondary)
         notebook.add(act, text="Quick Actions")
         af = tk.Frame(act, bg=Theme.bg_secondary)
@@ -691,24 +685,19 @@ class GateKeeper:
         panel = tk.Frame(main, bg=Theme.bg_secondary, width=320)
         panel.pack(side=tk.RIGHT, fill=tk.Y)
         panel.pack_propagate(False)
-        # Account name
         self.panel_title = tk.Label(panel, text="Select an account", bg=Theme.bg_secondary, fg=Theme.text_primary, font=Theme.subheading_font)
         self.panel_title.pack(pady=(20,10))
-        # Strength circle
         self.panel_circle = StrengthCircle(panel, score=0, size=80)
         self.panel_circle.pack(pady=10)
-        # Strength text
         self.panel_strength = tk.Label(panel, text="", bg=Theme.bg_secondary, fg=Theme.text_secondary, font=Theme.body_font)
         self.panel_strength.pack()
         self.panel_crack = tk.Label(panel, text="", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font)
         self.panel_crack.pack(pady=(0,10))
-        # Password row (like screenshot)
         pwd_row = tk.Frame(panel, bg=Theme.bg_secondary)
         pwd_row.pack(pady=5, padx=15, fill=tk.X)
         tk.Label(pwd_row, text="🔑 PASSWORD", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font, width=10, anchor=tk.W).pack(side=tk.LEFT)
         self.panel_password = tk.Label(pwd_row, text="", bg=Theme.bg_input, fg=Theme.text_primary, font=Theme.mono_font, padx=10, pady=5, relief="flat", bd=1)
         self.panel_password.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        # Action buttons
         btn_frame = tk.Frame(panel, bg=Theme.bg_secondary)
         btn_frame.pack(pady=10)
         self.show_btn = tk.Button(btn_frame, text="Show", bg=Theme.bg_input, fg=Theme.text_primary, bd=0, padx=20, pady=5, command=self.toggle_password, state=tk.DISABLED)
@@ -719,19 +708,16 @@ class GateKeeper:
         self.edit_btn.pack(side=tk.LEFT, padx=5)
         self.delete_btn = tk.Button(btn_frame, text="Delete", bg=Theme.accent_danger, fg=Theme.text_primary, bd=0, padx=20, pady=5, command=self.delete_account, state=tk.DISABLED)
         self.delete_btn.pack(side=tk.LEFT, padx=5)
-        # Strengths section
         strengths_frame = tk.LabelFrame(panel, text="✅ Strengths", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font)
         strengths_frame.pack(fill=tk.X, padx=15, pady=5)
         self.panel_strengths = tk.Text(strengths_frame, height=2, bg=Theme.bg_input, fg=Theme.accent_success, bd=0, padx=8, pady=5, wrap=tk.WORD, font=Theme.small_font)
         self.panel_strengths.pack(fill=tk.X, padx=5, pady=5)
         self.panel_strengths.config(state=tk.DISABLED)
-        # Issues section
         issues_frame = tk.LabelFrame(panel, text="⚠️ Issues to fix", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font)
         issues_frame.pack(fill=tk.X, padx=15, pady=5)
         self.panel_issues = tk.Text(issues_frame, height=2, bg=Theme.bg_input, fg=Theme.accent_danger, bd=0, padx=8, pady=5, wrap=tk.WORD, font=Theme.small_font)
         self.panel_issues.pack(fill=tk.X, padx=5, pady=5)
         self.panel_issues.config(state=tk.DISABLED)
-        # Tip
         tip = tk.Label(panel, text="💡 Tip: Longer passwords are stronger than complex ones", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font, wraplength=280)
         tip.pack(side=tk.BOTTOM, pady=15)
     def refresh_accounts(self):
