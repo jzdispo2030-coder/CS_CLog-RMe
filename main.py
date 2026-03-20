@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
+import tkinter.font as tkfont
 
 # Pyperclip is included directly in the project (see pyperclip.py file)
 # Licensed under BSD-3-Clause - see LICENSE-pyperclip.txt
@@ -29,13 +30,13 @@ def save_accounts():
         json.dump(accounts, file, indent=4)
 
 def generate_password(length=20):
-    """Generate a strong random password - now longer by default"""
+    """Generate a strong random password"""
     chars = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?/~"
     
     while True:
         password = ''.join(random.choice(chars) for _ in range(length))
         score, _ = check_password_strength(password)
-        if score >= 8:  # Aim for very strong passwords
+        if score >= 8:
             return password
 
 def detect_password_reuse():
@@ -61,33 +62,125 @@ def detect_password_reuse():
     return reused_passwords
 
 # ============================================================================
-# DARK MODE COLORS
+# MODERN MINIMALIST THEME
 # ============================================================================
 
-class DarkTheme:
-    bg_dark = "#1e1e1e"
-    bg_medium = "#2d2d2d"
-    bg_light = "#3c3c3c"
-    fg_light = "#ffffff"
-    fg_dim = "#cccccc"
-    accent_blue = "#007acc"
-    accent_green = "#2ecc71"
-    accent_red = "#e74c3c"
-    accent_orange = "#f39c12"
-    accent_purple = "#9b59b6"
-    border = "#555555"
-    selection = "#264f78"
+class ModernTheme:
+    # Color palette - clean and minimal
+    bg_primary = "#ffffff"           # Pure white background
+    bg_secondary = "#f8f9fa"         # Light gray for cards
+    bg_tertiary = "#e9ecef"          # Slightly darker gray for hover
+    accent = "#4361ee"                # Vibrant blue for primary actions
+    accent_light = "#4895ef"          # Lighter blue for hover
+    accent_success = "#06d6a0"        # Teal for success
+    accent_warning = "#ff9e00"         # Orange for warnings
+    accent_danger = "#ef476f"          # Pink/red for danger
+    text_primary = "#212529"           # Almost black for primary text
+    text_secondary = "#6c757d"         # Gray for secondary text
+    text_light = "#adb5bd"              # Light gray for disabled
+    border = "#dee2e6"                  # Light gray borders
+    card_shadow = "#00000010"            # Subtle shadow
     
-    # Strength colors (for dark mode)
+    # Fonts - clean, modern, professional
+    heading_font = ("Segoe UI", 16, "bold")
+    subheading_font = ("Segoe UI", 12, "bold")
+    body_font = ("Segoe UI", 10)
+    small_font = ("Segoe UI", 9)
+    monospace_font = ("Consolas", 10) if os.name == 'nt' else ("Menlo", 10)
+    
+    # Strength colors
     strength_colors = {
-        "Excellent": "#2ecc71",
-        "Very Strong": "#27ae60",
-        "Strong": "#3498db",
-        "Good": "#f39c12",
-        "Fair": "#f1c40f",
-        "Weak": "#e67e22",
-        "Very Weak": "#e74c3c"
+        "Excellent": "#06d6a0",
+        "Very Strong": "#1b9e5c",
+        "Strong": "#4361ee",
+        "Good": "#ff9e00",
+        "Fair": "#f9c74f",
+        "Weak": "#f9844a",
+        "Very Weak": "#ef476f"
     }
+
+# ============================================================================
+# CUSTOM WIDGETS
+# ============================================================================
+
+class ModernButton(tk.Canvas):
+    """Custom modern button with hover effects"""
+    def __init__(self, master, text, command=None, bg=ModernTheme.accent, fg="white", 
+                 width=120, height=35, corner_radius=8, font=ModernTheme.body_font, **kwargs):
+        super().__init__(master, width=width, height=height, highlightthickness=0, bg=ModernTheme.bg_primary)
+        self.command = command
+        self.text = text
+        self.bg = bg
+        self.fg = fg
+        self.width = width
+        self.height = height
+        self.corner_radius = corner_radius
+        self.font = font
+        
+        self.bind("<Enter>", self.on_enter)
+        self.bind("<Leave>", self.on_leave)
+        self.bind("<Button-1>", self.on_click)
+        
+        self.draw_button(self.bg)
+    
+    def draw_button(self, color):
+        self.delete("all")
+        # Rounded rectangle
+        self.create_rounded_rect(0, 0, self.width, self.height, self.corner_radius, fill=color, outline="")
+        # Text
+        self.create_text(self.width//2, self.height//2, text=self.text, fill=self.fg, font=self.font)
+    
+    def create_rounded_rect(self, x1, y1, x2, y2, radius, **kwargs):
+        points = [x1+radius, y1,
+                  x2-radius, y1,
+                  x2, y1,
+                  x2, y1+radius,
+                  x2, y2-radius,
+                  x2, y2,
+                  x2-radius, y2,
+                  x1+radius, y2,
+                  x1, y2,
+                  x1, y2-radius,
+                  x1, y1+radius,
+                  x1, y1]
+        self.create_polygon(points, smooth=True, **kwargs)
+    
+    def on_enter(self, event):
+        self.draw_button(self.lighten_color(self.bg))
+    
+    def on_leave(self, event):
+        self.draw_button(self.bg)
+    
+    def on_click(self, event):
+        if self.command:
+            self.command()
+    
+    def lighten_color(self, color):
+        """Lighten a hex color for hover effect"""
+        if color.startswith("#"):
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            r = min(255, r + 20)
+            g = min(255, g + 20)
+            b = min(255, b + 20)
+            return f"#{r:02x}{g:02x}{b:02x}"
+        return color
+
+class ModernEntry(ttk.Entry):
+    """Styled entry widget"""
+    def __init__(self, master, **kwargs):
+        super().__init__(master, font=ModernTheme.body_font, **kwargs)
+        style = ttk.Style()
+        style.configure("Modern.TEntry", 
+                       fieldbackground="white",
+                       bordercolor=ModernTheme.border,
+                       lightcolor=ModernTheme.border,
+                       darkcolor=ModernTheme.border,
+                       borderwidth=1,
+                       relief="solid",
+                       padding=5)
+        self.configure(style="Modern.TEntry")
 
 # ============================================================================
 # MAIN GUI APPLICATION
@@ -96,11 +189,12 @@ class DarkTheme:
 class GateKeeperGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("GateKeeper Password Manager")
-        self.root.geometry("1000x800")
+        self.root.title("GateKeeper")
+        self.root.geometry("1200x700")
+        self.root.configure(bg=ModernTheme.bg_primary)
         
-        # Apply dark mode to root
-        self.root.configure(bg=DarkTheme.bg_dark)
+        # Center the window
+        self.center_window()
         
         # Password visibility toggle
         self.show_passwords = False
@@ -108,392 +202,423 @@ class GateKeeperGUI:
         # Current selected account
         self.current_account = None
         
-        # Configure styles for dark mode
         self.setup_styles()
-        
         self.setup_menu()
         self.setup_ui()
         self.show_intro()
         self.refresh_list()
     
+    def center_window(self):
+        """Center the window on screen"""
+        self.root.update_idletasks()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
+    
     def setup_styles(self):
-        """Configure ttk styles for dark mode"""
+        """Configure ttk styles for modern look"""
         style = ttk.Style()
         style.theme_use('clam')
         
         # Configure colors
         style.configure('.', 
-                       background=DarkTheme.bg_dark,
-                       foreground=DarkTheme.fg_light,
-                       fieldbackground=DarkTheme.bg_medium,
-                       troughcolor=DarkTheme.bg_light,
-                       selectbackground=DarkTheme.selection,
-                       selectforeground=DarkTheme.fg_light)
+                       background=ModernTheme.bg_primary,
+                       foreground=ModernTheme.text_primary,
+                       fieldbackground="white",
+                       troughcolor=ModernTheme.bg_secondary,
+                       selectbackground=ModernTheme.accent_light,
+                       selectforeground="white")
         
-        style.configure('TLabel', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
-        style.configure('TFrame', background=DarkTheme.bg_dark)
-        style.configure('TLabelframe', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
-        style.configure('TLabelframe.Label', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        style.configure('TLabel', 
+                       background=ModernTheme.bg_primary, 
+                       foreground=ModernTheme.text_primary,
+                       font=ModernTheme.body_font)
         
-        style.configure('TButton', 
-                       background=DarkTheme.bg_light,
-                       foreground=DarkTheme.fg_light,
+        style.configure('Heading.TLabel', 
+                       font=ModernTheme.heading_font,
+                       foreground=ModernTheme.text_primary)
+        
+        style.configure('Subheading.TLabel', 
+                       font=ModernTheme.subheading_font,
+                       foreground=ModernTheme.text_primary)
+        
+        style.configure('TFrame', background=ModernTheme.bg_primary)
+        style.configure('Card.TFrame', 
+                       background=ModernTheme.bg_secondary,
+                       relief="solid",
                        borderwidth=1,
-                       focusthickness=3,
-                       focuscolor='none')
-        style.map('TButton',
-                 background=[('active', DarkTheme.accent_blue),
-                           ('pressed', DarkTheme.bg_medium)],
-                 foreground=[('active', DarkTheme.fg_light)])
+                       bordercolor=ModernTheme.border)
+        
+        style.configure('TLabelframe', 
+                       background=ModernTheme.bg_primary,
+                       foreground=ModernTheme.text_primary,
+                       bordercolor=ModernTheme.border,
+                       lightcolor=ModernTheme.border,
+                       darkcolor=ModernTheme.border)
+        
+        style.configure('TLabelframe.Label', 
+                       background=ModernTheme.bg_primary,
+                       foreground=ModernTheme.text_primary,
+                       font=ModernTheme.subheading_font)
         
         style.configure('TEntry', 
-                       fieldbackground=DarkTheme.bg_medium,
-                       foreground=DarkTheme.fg_light,
-                       insertcolor=DarkTheme.fg_light)
+                       fieldbackground="white",
+                       bordercolor=ModernTheme.border,
+                       borderwidth=1,
+                       padding=5)
         
         style.configure('TCombobox', 
-                       fieldbackground=DarkTheme.bg_medium,
-                       foreground=DarkTheme.fg_light,
-                       selectbackground=DarkTheme.selection)
+                       fieldbackground="white",
+                       bordercolor=ModernTheme.border,
+                       borderwidth=1,
+                       padding=5)
         
         style.configure('TScrollbar',
-                       background=DarkTheme.bg_light,
-                       troughcolor=DarkTheme.bg_medium,
-                       arrowcolor=DarkTheme.fg_light)
+                       background=ModernTheme.bg_tertiary,
+                       troughcolor=ModernTheme.bg_secondary,
+                       arrowcolor=ModernTheme.text_primary,
+                       borderwidth=0)
         
         style.configure('TProgressbar',
-                       background=DarkTheme.accent_green,
-                       troughcolor=DarkTheme.bg_medium)
+                       background=ModernTheme.accent,
+                       troughcolor=ModernTheme.bg_secondary,
+                       borderwidth=0)
         
-        style.configure('TMenubar', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
-        style.configure('TMenu', background=DarkTheme.bg_medium, foreground=DarkTheme.fg_light)
+        style.configure('TMenubar', 
+                       background=ModernTheme.bg_primary,
+                       foreground=ModernTheme.text_primary)
         
-        # Configure PanedWindow
-        style.configure('TPanedwindow', background=DarkTheme.border)
+        style.configure('TMenu', 
+                       background=ModernTheme.bg_secondary,
+                       foreground=ModernTheme.text_primary,
+                       borderwidth=0)
+        
+        style.map('TMenu',
+                 background=[('active', ModernTheme.accent_light)],
+                 foreground=[('active', 'white')])
     
     def setup_menu(self):
-        """Create menu bar"""
-        menubar = tk.Menu(self.root, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                         activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
+        """Create minimal menu bar"""
+        menubar = tk.Menu(self.root, bg=ModernTheme.bg_primary, fg=ModernTheme.text_primary,
+                         activebackground=ModernTheme.accent_light, activeforeground="white",
+                         borderwidth=0, relief="flat")
         self.root.config(menu=menubar)
         
         # File menu
-        file_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                           activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
+        file_menu = tk.Menu(menubar, tearoff=0, bg=ModernTheme.bg_secondary, fg=ModernTheme.text_primary,
+                           activebackground=ModernTheme.accent_light, activeforeground="white",
+                           borderwidth=0)
         menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Add Account", command=self.add_account_dialog, accelerator="Ctrl+N")
+        file_menu.add_command(label="Add Account", command=self.add_account_dialog, accelerator="⌘N")
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         
         # View menu
-        view_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                           activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
+        view_menu = tk.Menu(menubar, tearoff=0, bg=ModernTheme.bg_secondary, fg=ModernTheme.text_primary,
+                           activebackground=ModernTheme.accent_light, activeforeground="white",
+                           borderwidth=0)
         menubar.add_cascade(label="View", menu=view_menu)
-        view_menu.add_command(label="Refresh List", command=self.refresh_list)
+        view_menu.add_command(label="Refresh", command=self.refresh_list)
         view_menu.add_separator()
-        view_menu.add_command(label="Show All", command=lambda: self.set_category_filter("All"))
-        view_menu.add_command(label="Show Academic", command=lambda: self.set_category_filter("Academic"))
-        view_menu.add_command(label="Show Personal", command=lambda: self.set_category_filter("Personal"))
-        view_menu.add_command(label="Show Internship", command=lambda: self.set_category_filter("Internship"))
-        view_menu.add_command(label="Show Other", command=lambda: self.set_category_filter("Other"))
+        view_menu.add_command(label="All Accounts", command=lambda: self.set_category_filter("All"))
+        view_menu.add_command(label="Academic", command=lambda: self.set_category_filter("Academic"))
+        view_menu.add_command(label="Personal", command=lambda: self.set_category_filter("Personal"))
+        view_menu.add_command(label="Internship", command=lambda: self.set_category_filter("Internship"))
+        view_menu.add_command(label="Other", command=lambda: self.set_category_filter("Other"))
         
         # Tools menu
-        tools_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                            activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
+        tools_menu = tk.Menu(menubar, tearoff=0, bg=ModernTheme.bg_secondary, fg=ModernTheme.text_primary,
+                            activebackground=ModernTheme.accent_light, activeforeground="white",
+                            borderwidth=0)
         menubar.add_cascade(label="Tools", menu=tools_menu)
         tools_menu.add_command(label="Password Reuse Report", command=self.show_password_reuse)
-        tools_menu.add_command(label="Generate Strong Password", command=self.show_password_generator)
-        tools_menu.add_command(label="Password Health Check", command=self.show_password_health)
+        tools_menu.add_command(label="Generate Password", command=self.show_password_generator)
+        tools_menu.add_command(label="Health Dashboard", command=self.show_password_health)
         
         # Help menu
-        help_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                           activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
+        help_menu = tk.Menu(menubar, tearoff=0, bg=ModernTheme.bg_secondary, fg=ModernTheme.text_primary,
+                           activebackground=ModernTheme.accent_light, activeforeground="white",
+                           borderwidth=0)
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="About", command=self.show_about)
-        help_menu.add_command(label="Local Storage Warning", command=self.show_storage_warning)
+        help_menu.add_command(label="Storage Warning", command=self.show_storage_warning)
         
         # Keyboard shortcuts
+        self.root.bind('<Command-n>', lambda e: self.add_account_dialog())
         self.root.bind('<Control-n>', lambda e: self.add_account_dialog())
     
     def setup_ui(self):
-        # Top frame for welcome and stats
-        top_frame = ttk.Frame(self.root, padding="10")
-        top_frame.pack(fill=tk.X)
+        # Main container with padding
+        main_container = ttk.Frame(self.root, padding="20")
+        main_container.pack(fill=tk.BOTH, expand=True)
         
-        self.welcome_label = ttk.Label(top_frame, text="GateKeeper Password Manager", 
-                                       font=('Arial', 18, 'bold'))
-        self.welcome_label.pack()
+        # ====================================================================
+        # HEADER SECTION
+        # ====================================================================
+        header_frame = ttk.Frame(main_container)
+        header_frame.pack(fill=tk.X, pady=(0, 20))
         
-        self.stats_label = ttk.Label(top_frame, text="", font=('Arial', 11))
+        # Logo/Title
+        title_frame = ttk.Frame(header_frame)
+        title_frame.pack(side=tk.LEFT)
+        
+        ttk.Label(title_frame, text="GateKeeper", font=("Segoe UI", 24, "bold"), 
+                 foreground=ModernTheme.accent).pack(anchor=tk.W)
+        ttk.Label(title_frame, text="password manager", font=("Segoe UI", 10), 
+                 foreground=ModernTheme.text_secondary).pack(anchor=tk.W)
+        
+        # Stats card
+        stats_card = ttk.Frame(header_frame, style='Card.TFrame', padding="15")
+        stats_card.pack(side=tk.RIGHT)
+        
+        self.stats_label = ttk.Label(stats_card, text="0 accounts", font=ModernTheme.subheading_font,
+                                     foreground=ModernTheme.text_primary)
         self.stats_label.pack()
         
-        # Warning frame
-        warning_frame = ttk.Frame(top_frame)
-        warning_frame.pack(fill=tk.X, pady=5)
+        # Warning banner
+        warning_frame = ttk.Frame(main_container, style='Card.TFrame', padding="10")
+        warning_frame.pack(fill=tk.X, pady=(0, 20))
         
-        self.warning_text = tk.Text(warning_frame, height=2, width=80, font=('Arial', 9), 
-                                    bg=DarkTheme.bg_medium, fg=DarkTheme.accent_red, 
-                                    wrap=tk.WORD, bd=1, relief=tk.SUNKEN)
+        self.warning_text = tk.Text(warning_frame, height=1, font=ModernTheme.small_font,
+                                    bg=ModernTheme.bg_secondary, fg=ModernTheme.accent_warning,
+                                    wrap=tk.WORD, bd=0, highlightthickness=0)
         self.warning_text.pack(fill=tk.X)
-        self.warning_text.insert(1.0, "⚠️ LOCAL STORAGE ONLY: Accounts saved on this device only. Data lost if program files are deleted.")
+        self.warning_text.insert(1.0, "⚠️  Local storage only — accounts saved on this device")
         self.warning_text.config(state=tk.DISABLED)
         
-        # Tip of the day
-        self.tip_label = ttk.Label(top_frame, text="", font=('Arial', 9, 'italic'))
-        self.tip_label.pack(pady=5)
+        # ====================================================================
+        # SEARCH AND FILTER SECTION
+        # ====================================================================
+        search_frame = ttk.Frame(main_container)
+        search_frame.pack(fill=tk.X, pady=(0, 20))
         
-        # Separator
-        ttk.Separator(self.root, orient='horizontal').pack(fill=tk.X, padx=10, pady=5)
+        # Search bar with icon
+        search_container = ttk.Frame(search_frame)
+        search_container.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # Search and filter frame
-        filter_frame = ttk.Frame(self.root, padding="10")
-        filter_frame.pack(fill=tk.X)
+        ttk.Label(search_container, text="🔍", font=("Segoe UI", 12)).pack(side=tk.LEFT, padx=(0, 10))
         
-        # Search bar
-        ttk.Label(filter_frame, text="🔍 Search:").pack(side=tk.LEFT, padx=5)
         self.search_var = tk.StringVar()
         self.search_var.trace('w', self.filter_list)
-        search_entry = ttk.Entry(filter_frame, textvariable=self.search_var, width=30)
-        search_entry.pack(side=tk.LEFT, padx=5)
+        search_entry = ModernEntry(search_container, textvariable=self.search_var)
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Category filter
-        ttk.Label(filter_frame, text="📂 Category:").pack(side=tk.LEFT, padx=(20,5))
+        category_container = ttk.Frame(search_frame)
+        category_container.pack(side=tk.RIGHT, padx=(20, 0))
+        
+        ttk.Label(category_container, text="Category:", font=ModernTheme.body_font,
+                 foreground=ModernTheme.text_secondary).pack(side=tk.LEFT, padx=(0, 10))
+        
         self.category_var = tk.StringVar(value="All")
-        category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var, 
+        category_combo = ttk.Combobox(category_container, textvariable=self.category_var,
                                        values=["All", "Academic", "Personal", "Internship", "Other"],
-                                       state="readonly", width=15)
-        category_combo.pack(side=tk.LEFT, padx=5)
+                                       state="readonly", width=15, font=ModernTheme.body_font)
+        category_combo.pack(side=tk.LEFT)
         category_combo.bind('<<ComboboxSelected>>', self.filter_list)
         
-        # Add account button
-        add_btn = ttk.Button(filter_frame, text="➕ Add Account", command=self.add_account_dialog)
-        add_btn.pack(side=tk.RIGHT, padx=5)
+        # ====================================================================
+        # MAIN CONTENT - Two column layout
+        # ====================================================================
+        content_frame = ttk.Frame(main_container)
+        content_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Main content area
-        paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
-        paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # Left column - Accounts list
+        left_column = ttk.Frame(content_frame)
+        left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
-        # Left frame - Account list
-        left_frame = ttk.Frame(paned)
-        paned.add(left_frame, weight=1)
+        # Section header with add button
+        left_header = ttk.Frame(left_column)
+        left_header.pack(fill=tk.X, pady=(0, 10))
         
-        # Account list label
-        ttk.Label(left_frame, text="Your Accounts", font=('Arial', 12, 'bold')).pack(anchor=tk.W, pady=5)
+        ttk.Label(left_header, text="Your Accounts", font=ModernTheme.subheading_font).pack(side=tk.LEFT)
         
-        # Account list with scrollbar
-        list_frame = ttk.Frame(left_frame)
-        list_frame.pack(fill=tk.BOTH, expand=True)
+        add_btn = ModernButton(left_header, text="+ New", command=self.add_account_dialog,
+                               bg=ModernTheme.accent, width=80, height=30, corner_radius=6)
+        add_btn.pack(side=tk.RIGHT)
+        
+        # Accounts list with custom styling
+        list_container = ttk.Frame(left_column, style='Card.TFrame')
+        list_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Create a custom listbox with modern styling
+        list_frame = ttk.Frame(list_container)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
         
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.accounts_list = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                                        font=('Courier', 10), selectmode=tk.SINGLE, height=20,
-                                        bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                                        selectbackground=DarkTheme.selection,
-                                        selectforeground=DarkTheme.fg_light,
-                                        bd=1, relief=tk.SUNKEN)
+                                        font=ModernTheme.monospace_font,
+                                        bg="white", fg=ModernTheme.text_primary,
+                                        selectbackground=ModernTheme.accent_light,
+                                        selectforeground="white",
+                                        bd=0, highlightthickness=0,
+                                        activestyle="none",
+                                        relief="flat")
         self.accounts_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.accounts_list.bind('<<ListboxSelect>>', self.on_account_select)
         self.accounts_list.bind('<Double-Button-1>', lambda e: self.inspect_password())
         
         scrollbar.config(command=self.accounts_list.yview)
         
-        # Right frame - Account details and actions
-        right_frame = ttk.Frame(paned, padding="15")
-        paned.add(right_frame, weight=1)
+        # Right column - Details and actions
+        right_column = ttk.Frame(content_frame)
+        right_column.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
         
-        # Details header
-        details_header = ttk.Frame(right_frame)
-        details_header.pack(fill=tk.X)
+        # Details card
+        details_card = ttk.Frame(right_column, style='Card.TFrame', padding="15")
+        details_card.pack(fill=tk.BOTH, expand=True)
         
-        ttk.Label(details_header, text="Account Details", font=('Arial', 14, 'bold')).pack(side=tk.LEFT)
+        ttk.Label(details_card, text="Account Details", font=ModernTheme.subheading_font).pack(anchor=tk.W, pady=(0, 10))
         
-        # Details text with scrollbar
-        details_frame = ttk.Frame(right_frame)
-        details_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        # Details text
+        details_container = ttk.Frame(details_card)
+        details_container.pack(fill=tk.BOTH, expand=True)
         
-        details_scrollbar = ttk.Scrollbar(details_frame)
+        details_scrollbar = ttk.Scrollbar(details_container)
         details_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.details_text = tk.Text(details_frame, yscrollcommand=details_scrollbar.set,
-                                    height=10, width=40, font=('Courier', 10), wrap=tk.WORD,
-                                    bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                                    insertbackground=DarkTheme.fg_light,
-                                    bd=1, relief=tk.SUNKEN)
+        self.details_text = tk.Text(details_container, yscrollcommand=details_scrollbar.set,
+                                    height=8, font=ModernTheme.monospace_font,
+                                    bg="white", fg=ModernTheme.text_primary,
+                                    bd=0, highlightthickness=0,
+                                    relief="flat", padx=10, pady=10)
         self.details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.details_text.config(state=tk.DISABLED)
         
         details_scrollbar.config(command=self.details_text.yview)
         
-        # Enhanced Strength Meter Frame
-        strength_frame = ttk.LabelFrame(right_frame, text="Password Strength Analysis", padding="10")
-        strength_frame.pack(fill=tk.X, pady=10)
+        # Strength meter
+        strength_frame = ttk.Frame(details_card)
+        strength_frame.pack(fill=tk.X, pady=(15, 0))
         
-        # Strength bar and label
-        bar_frame = ttk.Frame(strength_frame)
-        bar_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(strength_frame, text="Password Strength", font=ModernTheme.small_font,
+                 foreground=ModernTheme.text_secondary).pack(anchor=tk.W)
         
-        self.strength_bar = ttk.Progressbar(bar_frame, length=300, mode='determinate')
-        self.strength_bar.pack(side=tk.LEFT, padx=5)
+        meter_frame = ttk.Frame(strength_frame)
+        meter_frame.pack(fill=tk.X, pady=(5, 0))
         
-        self.strength_label = ttk.Label(bar_frame, text="", font=('Arial', 10, 'bold'))
-        self.strength_label.pack(side=tk.LEFT, padx=10)
+        self.strength_bar = ttk.Progressbar(meter_frame, length=200, mode='determinate')
+        self.strength_bar.pack(side=tk.LEFT)
         
-        # Crack time estimate
-        time_frame = ttk.Frame(strength_frame)
-        time_frame.pack(fill=tk.X, pady=5)
+        self.strength_label = ttk.Label(meter_frame, text="", font=ModernTheme.body_font)
+        self.strength_label.pack(side=tk.LEFT, padx=(10, 0))
         
-        ttk.Label(time_frame, text="⏱️ Estimated crack time:", font=('Arial', 9)).pack(side=tk.LEFT)
-        self.crack_time_label = ttk.Label(time_frame, text="", font=('Arial', 9, 'bold'))
-        self.crack_time_label.pack(side=tk.LEFT, padx=5)
+        self.crack_time_label = ttk.Label(strength_frame, text="", font=ModernTheme.small_font,
+                                         foreground=ModernTheme.text_secondary)
+        self.crack_time_label.pack(anchor=tk.W, pady=(5, 0))
         
-        # Strengths list
-        strengths_frame = ttk.Frame(strength_frame)
-        strengths_frame.pack(fill=tk.X, pady=5)
+        # ====================================================================
+        # ACTION BUTTONS - Minimal and clean
+        # ====================================================================
+        actions_card = ttk.Frame(right_column, style='Card.TFrame', padding="15")
+        actions_card.pack(fill=tk.X, pady=(10, 0))
         
-        ttk.Label(strengths_frame, text="✅ Strengths:", font=('Arial', 9, 'bold')).pack(anchor=tk.W)
-        self.strengths_list = tk.Text(strengths_frame, height=2, width=40, font=('Arial', 8), 
-                                      wrap=tk.WORD, bg=DarkTheme.bg_medium, fg=DarkTheme.accent_green,
-                                      bd=1, relief=tk.SUNKEN)
-        self.strengths_list.pack(fill=tk.X, pady=2)
-        self.strengths_list.config(state=tk.DISABLED)
+        ttk.Label(actions_card, text="Actions", font=ModernTheme.subheading_font).pack(anchor=tk.W, pady=(0, 10))
         
-        # Issues list
-        issues_frame = ttk.Frame(strength_frame)
-        issues_frame.pack(fill=tk.X, pady=5)
+        # Button grid
+        button_grid = ttk.Frame(actions_card)
+        button_grid.pack(fill=tk.X)
         
-        ttk.Label(issues_frame, text="⚠️ Issues to fix:", font=('Arial', 9, 'bold')).pack(anchor=tk.W)
-        self.issues_list = tk.Text(issues_frame, height=2, width=40, font=('Arial', 8),
-                                   wrap=tk.WORD, bg=DarkTheme.bg_medium, fg=DarkTheme.accent_red,
-                                   bd=1, relief=tk.SUNKEN)
-        self.issues_list.pack(fill=tk.X, pady=2)
-        self.issues_list.config(state=tk.DISABLED)
+        # Row 1
+        row1 = ttk.Frame(button_grid)
+        row1.pack(fill=tk.X, pady=2)
         
-        # ============================================================================
-        # SCROLLABLE BUTTON AREA
-        # ============================================================================
-        button_container = ttk.Frame(right_frame)
-        button_container.pack(fill=tk.BOTH, expand=True, pady=10)
+        self.inspect_btn = ModernButton(row1, text="🔍 Inspect", command=self.inspect_password,
+                                        bg=ModernTheme.accent, width=100, height=32)
+        self.inspect_btn.pack(side=tk.LEFT, padx=2)
         
-        # Create canvas and scrollbar for buttons
-        button_canvas = tk.Canvas(button_container, bg=DarkTheme.bg_dark, highlightthickness=0)
-        button_scrollbar = ttk.Scrollbar(button_container, orient="vertical", command=button_canvas.yview)
-        button_scrollable_frame = ttk.Frame(button_canvas)
+        self.copy_btn = ModernButton(row1, text="📋 Copy", command=self.copy_password,
+                                     bg=ModernTheme.accent_success, width=100, height=32)
+        self.copy_btn.pack(side=tk.LEFT, padx=2)
         
-        button_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: button_canvas.configure(scrollregion=button_canvas.bbox("all"))
-        )
+        # Row 2
+        row2 = ttk.Frame(button_grid)
+        row2.pack(fill=tk.X, pady=2)
         
-        button_canvas.create_window((0, 0), window=button_scrollable_frame, anchor="n")
-        button_canvas.configure(yscrollcommand=button_scrollbar.set)
+        self.toggle_btn = ModernButton(row2, text="👁️ Show", command=self.toggle_password,
+                                       bg=ModernTheme.text_secondary, width=100, height=32, state=tk.DISABLED)
+        self.toggle_btn.pack(side=tk.LEFT, padx=2)
         
-        button_canvas.pack(side="left", fill="both", expand=True)
-        button_scrollbar.pack(side="right", fill="y")
+        self.edit_btn = ModernButton(row2, text="✏️ Edit", command=self.edit_account,
+                                     bg=ModernTheme.accent_warning, width=100, height=32, state=tk.DISABLED)
+        self.edit_btn.pack(side=tk.LEFT, padx=2)
         
-        # Action buttons inside scrollable frame
-        btn_frame = ttk.Frame(button_scrollable_frame)
-        btn_frame.pack(fill=tk.BOTH, expand=True, padx=5)
+        # Row 3
+        row3 = ttk.Frame(button_grid)
+        row3.pack(fill=tk.X, pady=2)
         
-        # First row
-        row1_frame = ttk.Frame(btn_frame)
-        row1_frame.pack(fill=tk.X, pady=3)
+        self.delete_btn = ModernButton(row3, text="🗑️ Delete", command=self.delete_account,
+                                       bg=ModernTheme.accent_danger, width=204, height=32, state=tk.DISABLED)
+        self.delete_btn.pack(side=tk.LEFT, padx=2)
         
-        self.inspect_btn = ttk.Button(row1_frame, text="🔍 Inspect Password", 
-                                   command=self.inspect_password)
-        self.inspect_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        # Tip of the day
+        tip_card = ttk.Frame(right_column, style='Card.TFrame', padding="10")
+        tip_card.pack(fill=tk.X, pady=(10, 0))
         
-        self.copy_btn = ttk.Button(row1_frame, text="📋 Copy Password", 
-                                   command=self.copy_password)
-        self.copy_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        ttk.Label(tip_card, text="💡 Tip", font=ModernTheme.small_font,
+                 foreground=ModernTheme.text_secondary).pack(anchor=tk.W)
         
-        # Second row
-        row2_frame = ttk.Frame(btn_frame)
-        row2_frame.pack(fill=tk.X, pady=3)
-        
-        self.toggle_btn = ttk.Button(row2_frame, text="👁️ Show Password", 
-                                     command=self.toggle_password, state=tk.DISABLED)
-        self.toggle_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
-        
-        self.edit_btn = ttk.Button(row2_frame, text="✏️ Edit Account", 
-                                   command=self.edit_account, state=tk.DISABLED)
-        self.edit_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
-        
-        # Third row
-        row3_frame = ttk.Frame(btn_frame)
-        row3_frame.pack(fill=tk.X, pady=3)
-        
-        self.delete_btn = ttk.Button(row3_frame, text="🗑️ Delete Account", 
-                                     command=self.delete_account, state=tk.DISABLED)
-        self.delete_btn.pack(fill=tk.X, padx=2)
-        
-        # Add some padding at the bottom for scrolling
-        ttk.Frame(btn_frame, height=20).pack()
+        self.tip_label = ttk.Label(tip_card, text="", font=ModernTheme.small_font,
+                                   wraplength=300, justify=tk.LEFT)
+        self.tip_label.pack(anchor=tk.W, pady=(5, 0))
         
         # Status bar
+        status_bar = ttk.Frame(self.root, style='Card.TFrame', padding="5")
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        
         self.status_var = tk.StringVar()
         self.status_var.set("Ready")
-        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
-        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        ttk.Label(status_bar, textvariable=self.status_var, font=ModernTheme.small_font,
+                 foreground=ModernTheme.text_secondary).pack(side=tk.LEFT)
     
     def show_intro(self):
         """Show introduction information"""
-        # Update stats
         account_count = len(accounts)
-        self.stats_label.config(text=f"📊 {account_count} saved account(s)")
+        self.stats_label.config(text=f"{account_count} accounts")
         
-        # Check for reused passwords
         reused = detect_password_reuse()
         if reused:
-            self.status_var.set(f"⚠️ {len(reused)} reused password(s) detected - Check Tools menu")
+            self.status_var.set(f"⚠️ {len(reused)} reused passwords detected")
         
-        # Random tip of the day
         tips = [
-            "💡 Tip: Use 16+ characters for excellent password strength",
-            "💡 Tip: Mix uppercase, lowercase, numbers, and symbols",
-            "💡 Tip: Never reuse passwords across different accounts",
-            "💡 Tip: Longer passwords are stronger than complex short ones",
-            "💡 Tip: Use the Inspect Password button for detailed analysis",
-            "💡 Tip: Check password health in the Tools menu",
-            "💡 Tip: Double-click an account to inspect its password",
-            "💡 Tip: Scroll down to see all action buttons"
+            "Use 16+ characters for excellent security",
+            "Mix uppercase, lowercase, numbers, and symbols",
+            "Never reuse passwords across accounts",
+            "Longer passwords are stronger than complex short ones",
+            "Double-click an account to inspect it",
+            "Check Tools > Health Dashboard for overview"
         ]
         self.tip_label.config(text=random.choice(tips))
     
     def set_category_filter(self, category):
-        """Set category filter from menu"""
         self.category_var.set(category)
         self.filter_list()
     
     def refresh_list(self):
-        """Refresh the account list"""
         self.accounts_list.delete(0, tk.END)
-        
-        # Sort accounts alphabetically for display
         sorted_nicknames = sorted(accounts.keys())
         
         for nickname in sorted_nicknames:
             data = accounts[nickname]
-            display_text = f"{nickname} - {data['app']} [{data['category']}]"
+            display_text = f"{nickname} — {data['app']}  [{data['category']}]"
             self.accounts_list.insert(tk.END, display_text)
         
         self.show_intro()
     
     def filter_list(self, *args):
-        """Filter accounts based on search term and category"""
         search_term = self.search_var.get().lower()
         category_filter = self.category_var.get()
         
         self.accounts_list.delete(0, tk.END)
-        
-        # Sort accounts alphabetically for display
         sorted_nicknames = sorted(accounts.keys())
         
         for nickname in sorted_nicknames:
             data = accounts[nickname]
             
-            # Apply category filter
             if category_filter != "All":
                 if category_filter == "Other":
                     if data['category'].lower() in ["academic", "personal", "internship"]:
@@ -501,371 +626,75 @@ class GateKeeperGUI:
                 elif data['category'] != category_filter:
                     continue
             
-            # Apply search filter
             if search_term:
                 if (search_term not in nickname.lower() and 
                     search_term not in data['app'].lower()):
                     continue
             
-            display_text = f"{nickname} - {data['app']} [{data['category']}]"
+            display_text = f"{nickname} — {data['app']}  [{data['category']}]"
             self.accounts_list.insert(tk.END, display_text)
     
     def on_account_select(self, event):
-        """Handle account selection"""
         selection = self.accounts_list.curselection()
         if not selection:
             return
         
-        # Get the selected account nickname
         display_text = self.accounts_list.get(selection[0])
-        nickname = display_text.split(" - ")[0]
+        nickname = display_text.split(" — ")[0]
         
         if nickname in accounts:
             self.current_account = nickname
             self.display_account_details(nickname)
             
-            # Enable all buttons
-            self.toggle_btn.config(state=tk.NORMAL)
-            self.edit_btn.config(state=tk.NORMAL)
-            self.delete_btn.config(state=tk.NORMAL)
+            # Enable buttons
+            self.toggle_btn.configure(state=tk.NORMAL)
+            self.edit_btn.configure(state=tk.NORMAL)
+            self.delete_btn.configure(state=tk.NORMAL)
     
     def display_account_details(self, nickname):
-        """Display account details in the text area"""
         data = accounts[nickname]
         
-        # Show/hide password based on toggle
         if self.show_passwords:
             password_display = data['password']
         else:
             password_display = "•" * len(data['password'])
         
-        # Format details with better spacing
-        details = f"📝 Nickname: {nickname}\n"
-        details += f"📱 App: {data['app']}\n"
-        details += f"📂 Category: {data['category']}\n"
-        details += f"🔑 Password: {password_display}\n"
-        details += f"📅 Created: {data.get('created', 'Unknown')}\n"
-        details += f"🕒 Modified: {data.get('last_modified', 'Unknown')}"
+        details = f"Nickname: {nickname}\n"
+        details += f"App: {data['app']}\n"
+        details += f"Category: {data['category']}\n"
+        details += f"Password: {password_display}\n"
+        details += f"Created: {data.get('created', 'Unknown')}\n"
+        details += f"Modified: {data.get('last_modified', 'Unknown')}"
         
         self.details_text.config(state=tk.NORMAL)
         self.details_text.delete(1.0, tk.END)
         self.details_text.insert(1.0, details)
         self.details_text.config(state=tk.DISABLED)
         
-        # Get enhanced password feedback
         feedback = get_password_feedback(data['password'])
         
-        # Update strength meter
         self.strength_bar['value'] = (feedback['score'] / 10) * 100
-        self.strength_label.config(text=f"{feedback['category']} ({feedback['score']:.1f}/10)", 
-                                   foreground=DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light))
+        self.strength_label.config(text=f"{feedback['category']}",
+                                   foreground=ModernTheme.strength_colors.get(feedback['category'], ModernTheme.text_primary))
         
-        # Update crack time estimate
         crack_time = estimate_crack_time(data['password'])
-        self.crack_time_label.config(text=crack_time)
+        self.crack_time_label.config(text=f"⏱️  {crack_time} to crack")
         
-        # Update strengths list
-        self.strengths_list.config(state=tk.NORMAL)
-        self.strengths_list.delete(1.0, tk.END)
-        if feedback['strengths']:
-            for s in feedback['strengths']:
-                self.strengths_list.insert(tk.END, f"• {s}\n")
-        else:
-            self.strengths_list.insert(tk.END, "• No notable strengths\n")
-        self.strengths_list.config(state=tk.DISABLED)
-        
-        # Update issues list
-        self.issues_list.config(state=tk.NORMAL)
-        self.issues_list.delete(1.0, tk.END)
-        if feedback['issues']:
-            for issue in feedback['issues']:
-                self.issues_list.insert(tk.END, f"• {issue}\n")
-        else:
-            self.issues_list.insert(tk.END, "• No issues found - Excellent!\n")
-        self.issues_list.config(state=tk.DISABLED)
-        
-        # Update toggle button text
         if self.show_passwords:
-            self.toggle_btn.config(text="👁️ Hide Password")
+            self.toggle_btn.configure(text="👁️ Hide")
         else:
-            self.toggle_btn.config(text="👁️ Show Password")
-    
-    def inspect_password(self):
-        """Open detailed password inspector with actionable tips"""
-        if not self.current_account:
-            messagebox.showwarning("No Selection", "Please select an account first.")
-            return
-        
-        data = accounts[self.current_account]
-        feedback = get_password_feedback(data['password'])
-        
-        # Create inspector window with dark mode
-        inspector = tk.Toplevel(self.root)
-        inspector.title(f"Password Inspector - {self.current_account}")
-        inspector.geometry("600x700")
-        inspector.configure(bg=DarkTheme.bg_dark)
-        inspector.transient(self.root)
-        inspector.grab_set()
-        inspector.focus_set()
-        
-        # Header with score
-        header_frame = ttk.Frame(inspector, padding="15")
-        header_frame.pack(fill=tk.X)
-        
-        # Score display with color
-        score_frame = ttk.Frame(header_frame)
-        score_frame.pack(pady=5)
-        
-        score_color = DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light)
-        score_label = tk.Label(score_frame, text=f"{feedback['score']:.1f}/10", 
-                               font=('Arial', 24, 'bold'), fg=score_color, bg=DarkTheme.bg_dark)
-        score_label.pack()
-        
-        ttk.Label(header_frame, text=f"Password Strength: {feedback['category']}", 
-                  font=('Arial', 14, 'bold')).pack()
-        
-        # Notebook for tabs
-        notebook = ttk.Notebook(inspector)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Tab 1: Analysis
-        analysis_frame = ttk.Frame(notebook, padding="10")
-        notebook.add(analysis_frame, text="Analysis")
-        
-        # Password info
-        info_frame = ttk.LabelFrame(analysis_frame, text="Password Information", padding="10")
-        info_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(info_frame, text=f"Length: {len(data['password'])} characters", 
-                  font=('Arial', 10)).pack(anchor=tk.W, pady=2)
-        ttk.Label(info_frame, text=f"Crack Time: {estimate_crack_time(data['password'])}", 
-                  font=('Arial', 10)).pack(anchor=tk.W, pady=2)
-        
-        # Character breakdown
-        chars_frame = ttk.LabelFrame(analysis_frame, text="Character Breakdown", padding="10")
-        chars_frame.pack(fill=tk.X, pady=5)
-        
-        has_lower = bool(re.search(r"[a-z]", data['password']))
-        has_upper = bool(re.search(r"[A-Z]", data['password']))
-        has_digit = bool(re.search(r"[0-9]", data['password']))
-        has_symbol = bool(re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`]", data['password']))
-        
-        ttk.Label(chars_frame, text=f"✓ Lowercase: {'Yes' if has_lower else 'No'}", 
-                  foreground='#2ecc71' if has_lower else '#e74c3c').pack(anchor=tk.W, pady=2)
-        ttk.Label(chars_frame, text=f"✓ Uppercase: {'Yes' if has_upper else 'No'}", 
-                  foreground='#2ecc71' if has_upper else '#e74c3c').pack(anchor=tk.W, pady=2)
-        ttk.Label(chars_frame, text=f"✓ Numbers: {'Yes' if has_digit else 'No'}", 
-                  foreground='#2ecc71' if has_digit else '#e74c3c').pack(anchor=tk.W, pady=2)
-        ttk.Label(chars_frame, text=f"✓ Symbols: {'Yes' if has_symbol else 'No'}", 
-                  foreground='#2ecc71' if has_symbol else '#e74c3c').pack(anchor=tk.W, pady=2)
-        
-        # Tab 2: Issues & Fixes
-        issues_frame = ttk.Frame(notebook, padding="10")
-        notebook.add(issues_frame, text="Issues & Fixes")
-        
-        if feedback['issues']:
-            # Create canvas with scrollbar for many issues
-            canvas = tk.Canvas(issues_frame, bg=DarkTheme.bg_dark, highlightthickness=0)
-            scrollbar = ttk.Scrollbar(issues_frame, orient="vertical", command=canvas.yview)
-            scrollable_frame = ttk.Frame(canvas)
-            
-            scrollable_frame.bind(
-                "<Configure>",
-                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-            )
-            
-            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-            canvas.configure(yscrollcommand=scrollbar.set)
-            
-            canvas.pack(side="left", fill="both", expand=True)
-            scrollbar.pack(side="right", fill="y")
-            
-            for i, issue in enumerate(feedback['issues'], 1):
-                issue_card = ttk.LabelFrame(scrollable_frame, text=f"Issue {i}", padding="10")
-                issue_card.pack(fill=tk.X, pady=5, padx=5)
-                
-                ttk.Label(issue_card, text=issue, wraplength=450, font=('Arial', 10)).pack(anchor=tk.W, pady=5)
-                
-                # Suggest fix based on issue
-                if "uppercase" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Add capital letters (A-Z)", 
-                              foreground="#3498db").pack(anchor=tk.W)
-                elif "lowercase" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Add lowercase letters (a-z)", 
-                              foreground="#3498db").pack(anchor=tk.W)
-                elif "number" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Add numbers (0-9)", 
-                              foreground="#3498db").pack(anchor=tk.W)
-                elif "symbol" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Add symbols (!@#$%)", 
-                              foreground="#3498db").pack(anchor=tk.W)
-                elif "short" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Make password longer (12+ chars)", 
-                              foreground="#3498db").pack(anchor=tk.W)
-                elif "common" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Avoid common words or patterns", 
-                              foreground="#3498db").pack(anchor=tk.W)
-                elif "repeated" in issue.lower():
-                    ttk.Label(issue_card, text="💡 Fix: Use more unique characters", 
-                              foreground="#3498db").pack(anchor=tk.W)
-        else:
-            ttk.Label(issues_frame, text="✅ No issues found! Great password!", 
-                      font=('Arial', 14)).pack(pady=50)
-        
-        # Tab 3: Suggestions
-        suggestions_frame = ttk.Frame(notebook, padding="10")
-        notebook.add(suggestions_frame, text="Suggestions")
-        
-        # Generate suggestions based on password
-        ttk.Label(suggestions_frame, text="💡 Improvement Ideas:", 
-                  font=('Arial', 12, 'bold')).pack(anchor=tk.W, pady=10)
-        
-        suggestions = []
-        if len(data['password']) < 12:
-            suggestions.append("• Increase length to 12+ characters for better security")
-        if len(data['password']) < 16:
-            suggestions.append("• For excellent security, use 16+ characters")
-        if not has_upper or not has_lower:
-            suggestions.append("• Mix uppercase and lowercase letters")
-        if not has_digit:
-            suggestions.append("• Add numbers to increase complexity")
-        if not has_symbol:
-            suggestions.append("• Add symbols (!@#$%) for extra security")
-        if len(set(data['password'])) < len(data['password']) * 0.6:
-            suggestions.append("• Use more unique characters, avoid repetition")
-        
-        if suggestions:
-            for suggestion in suggestions:
-                ttk.Label(suggestions_frame, text=suggestion, 
-                         wraplength=500, font=('Arial', 10)).pack(anchor=tk.W, pady=3)
-        else:
-            ttk.Label(suggestions_frame, text="Your password looks great! No suggestions needed.", 
-                     font=('Arial', 11)).pack(pady=20)
-        
-        # Tab 4: Quick Actions
-        actions_frame = ttk.Frame(notebook, padding="10")
-        notebook.add(actions_frame, text="Quick Actions")
-        
-        ttk.Label(actions_frame, text="What would you like to do?", 
-                  font=('Arial', 12, 'bold')).pack(pady=10)
-        
-        action_btn_frame = ttk.Frame(actions_frame)
-        action_btn_frame.pack(pady=20)
-        
-        ttk.Button(action_btn_frame, text="🔄 Generate New Password", 
-                  command=lambda: self.suggest_better_password(data['password'], inspector),
-                  width=25).pack(pady=5)
-        
-        ttk.Button(action_btn_frame, text="📋 Copy to Clipboard", 
-                  command=lambda: self.copy_password_from_inspector(inspector),
-                  width=25).pack(pady=5)
-        
-        ttk.Button(action_btn_frame, text="✏️ Edit Account", 
-                  command=lambda: [inspector.destroy(), self.edit_account()],
-                  width=25).pack(pady=5)
-        
-        # Close button at bottom
-        ttk.Button(inspector, text="Close", command=inspector.destroy, width=20).pack(pady=10)
-    
-    def copy_password_from_inspector(self, inspector):
-        """Copy password from inspector window"""
-        if self.current_account:
-            password = accounts[self.current_account]['password']
-            try:
-                pyperclip.copy(password)
-                self.status_var.set("✓ Password copied to clipboard!")
-                messagebox.showinfo("Success", "Password copied to clipboard!")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to copy: {str(e)}")
-    
-    def suggest_better_password(self, current_password, parent_window):
-        """Suggest better passwords"""
-        suggestions = []
-        for _ in range(3):
-            suggestions.append(generate_password(16))
-        
-        # Create suggestion dialog with dark mode
-        dialog = tk.Toplevel(parent_window)
-        dialog.title("Password Suggestions")
-        dialog.geometry("500x400")
-        dialog.configure(bg=DarkTheme.bg_dark)
-        dialog.transient(parent_window)
-        dialog.grab_set()
-        
-        ttk.Label(dialog, text="Try one of these strong passwords:", 
-                  font=('Arial', 12, 'bold')).pack(pady=15)
-        
-        frame = ttk.Frame(dialog)
-        frame.pack(fill=tk.BOTH, expand=True, padx=20)
-        
-        for i, pwd in enumerate(suggestions):
-            pwd_frame = ttk.LabelFrame(frame, text=f"Option {i+1}", padding="10")
-            pwd_frame.pack(fill=tk.X, pady=5)
-            
-            ttk.Label(pwd_frame, text=pwd, font=('Courier', 10)).pack(side=tk.LEFT, padx=5)
-            ttk.Button(pwd_frame, text="Copy & Use", 
-                      command=lambda p=pwd: self.use_suggested_password(p, dialog)).pack(side=tk.RIGHT)
-        
-        ttk.Button(dialog, text="Cancel", command=dialog.destroy, width=15).pack(pady=15)
-    
-    def use_suggested_password(self, password, dialog):
-        """Use a suggested password"""
-        try:
-            pyperclip.copy(password)
-            dialog.destroy()
-            
-            result = messagebox.askyesno(
-                "Use This Password?",
-                f"Password copied to clipboard!\n\nPassword: {password}\n\n" +
-                "Would you like to update the current account with this password?"
-            )
-            
-            if result and self.current_account:
-                accounts[self.current_account]['password'] = password
-                accounts[self.current_account]['last_modified'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                save_accounts()
-                self.display_account_details(self.current_account)
-                self.status_var.set("✓ Password updated!")
-                messagebox.showinfo("Success", "Account updated with new password!")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed: {str(e)}")
-    
-    def copy_password(self):
-        """Copy password to clipboard using pyperclip"""
-        if not self.current_account:
-            messagebox.showwarning("No Selection", "Please select an account first.")
-            return
-        
-        # Check if password has been revealed
-        if not self.show_passwords:
-            messagebox.showwarning(
-                "Password Hidden", 
-                "🔒 Password is hidden.\n\nPlease click 'Show Password' first to reveal the password before copying."
-            )
-            return
-        
-        password = accounts[self.current_account]['password']
-        try:
-            pyperclip.copy(password)
-            self.status_var.set("✓ Password copied to clipboard!")
-            messagebox.showinfo("Success", "Password copied to clipboard!")
-        except Exception as e:
-            self.status_var.set(f"❌ Copy failed: {str(e)}")
-            messagebox.showerror("Error", f"Failed to copy password: {str(e)}")
+            self.toggle_btn.configure(text="👁️ Show")
     
     def toggle_password(self):
-        """Toggle password visibility"""
         if not self.current_account:
             messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
         if not self.show_passwords:
-            # Ask for confirmation before revealing password
             result = messagebox.askyesno(
                 "Security Confirmation",
-                "Are you sure you want to reveal this password?\n\nMake sure no one is looking at your screen."
+                "Reveal this password?\n\nMake sure no one is looking at your screen."
             )
-            
             if result:
                 self.show_passwords = True
             else:
@@ -876,563 +705,243 @@ class GateKeeperGUI:
         if self.current_account:
             self.display_account_details(self.current_account)
     
+    def copy_password(self):
+        if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
+            return
+        
+        if not self.show_passwords:
+            messagebox.showwarning(
+                "Password Hidden", 
+                "Click 'Show' first to reveal the password before copying."
+            )
+            return
+        
+        password = accounts[self.current_account]['password']
+        try:
+            pyperclip.copy(password)
+            self.status_var.set("✓ Password copied")
+            messagebox.showinfo("Success", "Password copied to clipboard!")
+        except Exception as e:
+            self.status_var.set("✗ Copy failed")
+            messagebox.showerror("Error", f"Failed to copy: {str(e)}")
+    
+    def inspect_password(self):
+        if not self.current_account:
+            messagebox.showwarning("No Selection", "Please select an account first.")
+            return
+        
+        data = accounts[self.current_account]
+        feedback = get_password_feedback(data['password'])
+        
+        inspector = tk.Toplevel(self.root)
+        inspector.title(f"Inspector — {self.current_account}")
+        inspector.geometry("500x600")
+        inspector.configure(bg=ModernTheme.bg_primary)
+        inspector.transient(self.root)
+        inspector.grab_set()
+        
+        # Modern inspector window
+        main_frame = ttk.Frame(inspector, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Header with score
+        header = ttk.Frame(main_frame)
+        header.pack(fill=tk.X, pady=(0, 20))
+        
+        score_color = ModernTheme.strength_colors.get(feedback['category'], ModernTheme.accent)
+        score_label = tk.Label(header, text=f"{feedback['score']:.1f}", 
+                               font=("Segoe UI", 36, "bold"), fg=score_color, bg=ModernTheme.bg_primary)
+        score_label.pack(side=tk.LEFT, padx=(0, 20))
+        
+        info = ttk.Frame(header)
+        info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        ttk.Label(info, text=feedback['category'], font=("Segoe UI", 16, "bold"),
+                 foreground=score_color).pack(anchor=tk.W)
+        ttk.Label(info, text=f"Length: {len(data['password'])} chars", 
+                 font=ModernTheme.small_font).pack(anchor=tk.W)
+        
+        # Tabs
+        notebook = ttk.Notebook(main_frame)
+        notebook.pack(fill=tk.BOTH, expand=True)
+        
+        # Analysis tab
+        analysis = ttk.Frame(notebook, padding="15")
+        notebook.add(analysis, text="Analysis")
+        
+        ttk.Label(analysis, text="Character Types", font=ModernTheme.subheading_font).pack(anchor=tk.W, pady=(0, 10))
+        
+        has_lower = bool(re.search(r"[a-z]", data['password']))
+        has_upper = bool(re.search(r"[A-Z]", data['password']))
+        has_digit = bool(re.search(r"[0-9]", data['password']))
+        has_symbol = bool(re.search(r"[!@#$%^&*()]", data['password']))
+        
+        types = [
+            ("Lowercase", has_lower),
+            ("Uppercase", has_upper),
+            ("Numbers", has_digit),
+            ("Symbols", has_symbol)
+        ]
+        
+        for label, present in types:
+            f = ttk.Frame(analysis)
+            f.pack(fill=tk.X, pady=2)
+            ttk.Label(f, text=label, width=10).pack(side=tk.LEFT)
+            status = "✓" if present else "✗"
+            color = ModernTheme.accent_success if present else ModernTheme.accent_danger
+            ttk.Label(f, text=status, foreground=color).pack(side=tk.LEFT)
+        
+        # Issues tab
+        issues_tab = ttk.Frame(notebook, padding="15")
+        notebook.add(issues_tab, text="Issues")
+        
+        if feedback['issues']:
+            for issue in feedback['issues']:
+                frame = ttk.Frame(issues_tab)
+                frame.pack(fill=tk.X, pady=2)
+                ttk.Label(frame, text="•", foreground=ModernTheme.accent_danger).pack(side=tk.LEFT, padx=(0, 5))
+                ttk.Label(frame, text=issue, wraplength=350).pack(side=tk.LEFT)
+        else:
+            ttk.Label(issues_tab, text="No issues found", foreground=ModernTheme.accent_success).pack()
+        
+        # Close button
+        ttk.Button(main_frame, text="Close", command=inspector.destroy).pack(pady=20)
+    
     def add_account_dialog(self):
         """Open dialog to add a new account"""
         dialog = tk.Toplevel(self.root)
-        dialog.title("Add New Account")
-        dialog.geometry("550x600")
-        dialog.configure(bg=DarkTheme.bg_dark)
+        dialog.title("Add Account")
+        dialog.geometry("450x500")
+        dialog.configure(bg=ModernTheme.bg_primary)
         dialog.transient(self.root)
         dialog.grab_set()
         
-        ttk.Label(dialog, text="Add New Account", font=('Arial', 16, 'bold')).pack(pady=10)
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Main frame with scrollbar for better UX
-        canvas = tk.Canvas(dialog, bg=DarkTheme.bg_dark, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        ttk.Label(main_frame, text="New Account", font=("Segoe UI", 16, "bold"),
+                 foreground=ModernTheme.accent).pack(anchor=tk.W, pady=(0, 20))
         
         # Form fields
-        frame = ttk.Frame(scrollable_frame, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
+        fields = [
+            ("Nickname", "nickname_var"),
+            ("App Name", "app_var"),
+            ("Category", "category_var")
+        ]
         
-        # Nickname
-        ttk.Label(frame, text="Nickname:", font=('Arial', 10)).grid(row=0, column=0, sticky=tk.W, pady=8)
         nickname_var = tk.StringVar()
-        nickname_entry = ttk.Entry(frame, textvariable=nickname_var, width=35, font=('Arial', 10))
-        nickname_entry.grid(row=0, column=1, pady=8, padx=10)
-        
-        # App name
-        ttk.Label(frame, text="App Name:", font=('Arial', 10)).grid(row=1, column=0, sticky=tk.W, pady=8)
         app_var = tk.StringVar()
-        app_entry = ttk.Entry(frame, textvariable=app_var, width=35, font=('Arial', 10))
-        app_entry.grid(row=1, column=1, pady=8, padx=10)
-        
-        # Category
-        ttk.Label(frame, text="Category:", font=('Arial', 10)).grid(row=2, column=0, sticky=tk.W, pady=8)
         category_var = tk.StringVar(value="Personal")
-        category_combo = ttk.Combobox(frame, textvariable=category_var,
-                                       values=["Academic", "Personal", "Internship", "Other"],
-                                       state="readonly", width=32, font=('Arial', 10))
-        category_combo.grid(row=2, column=1, pady=8, padx=10)
-        
-        # Password
-        ttk.Label(frame, text="Password:", font=('Arial', 10)).grid(row=3, column=0, sticky=tk.W, pady=8)
-        
-        password_frame = ttk.Frame(frame)
-        password_frame.grid(row=3, column=1, pady=8, padx=10, sticky=tk.W)
-        
         password_var = tk.StringVar()
-        password_entry = ttk.Entry(password_frame, textvariable=password_var, width=25, show="•", font=('Arial', 10))
-        password_entry.pack(side=tk.LEFT)
         
-        # Generate button
-        def generate_and_set():
-            pwd = generate_password()
-            password_var.set(pwd)
-            password_entry.config(show="")
-            show_pwd_var.set(True)
-            update_strength()
-        
-        ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
-        
-        # Show password checkbox
-        show_pwd_var = tk.BooleanVar()
-        def toggle_password_visibility():
-            if show_pwd_var.get():
-                password_entry.config(show="")
+        for i, (label, var_name) in enumerate(fields):
+            ttk.Label(main_frame, text=label, font=ModernTheme.small_font,
+                     foreground=ModernTheme.text_secondary).pack(anchor=tk.W, pady=(10, 2))
+            
+            if label == "Category":
+                combo = ttk.Combobox(main_frame, textvariable=category_var,
+                                     values=["Academic", "Personal", "Internship", "Other"],
+                                     state="readonly", font=ModernTheme.body_font)
+                combo.pack(fill=tk.X)
             else:
-                password_entry.config(show="•")
+                entry = ModernEntry(main_frame, textvariable=locals()[var_name])
+                entry.pack(fill=tk.X)
         
-        ttk.Checkbutton(frame, text="Show password", variable=show_pwd_var, 
-                       command=toggle_password_visibility).grid(row=4, column=0, columnspan=2, pady=5)
+        # Password field
+        ttk.Label(main_frame, text="Password", font=ModernTheme.small_font,
+                 foreground=ModernTheme.text_secondary).pack(anchor=tk.W, pady=(10, 2))
         
-        # Live strength meter for new password
-        strength_preview_frame = ttk.LabelFrame(frame, text="Password Strength Preview", padding="10")
-        strength_preview_frame.grid(row=5, column=0, columnspan=2, pady=15, sticky=tk.EW)
+        pwd_frame = ttk.Frame(main_frame)
+        pwd_frame.pack(fill=tk.X)
         
-        preview_bar = ttk.Progressbar(strength_preview_frame, length=350, mode='determinate')
-        preview_bar.pack(pady=5)
+        password_entry = ModernEntry(pwd_frame, textvariable=password_var, show="•")
+        password_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        preview_label = ttk.Label(strength_preview_frame, text="", font=('Arial', 10, 'bold'))
-        preview_label.pack()
-        
-        preview_crack = ttk.Label(strength_preview_frame, text="", font=('Arial', 8))
-        preview_crack.pack()
-        
-        def update_strength(*args):
-            pwd = password_var.get()
-            if pwd:
-                feedback = get_password_feedback(pwd)
-                preview_bar['value'] = (feedback['score'] / 10) * 100
-                preview_label.config(text=f"{feedback['category']} ({feedback['score']:.1f}/10)", 
-                                    foreground=DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light))
-                crack_time = estimate_crack_time(pwd)
-                preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
-            else:
-                preview_bar['value'] = 0
-                preview_label.config(text="Enter a password")
-                preview_crack.config(text="")
-        
-        # Trace password changes
-        password_var.trace('w', update_strength)
+        ttk.Button(pwd_frame, text="Generate", command=lambda: password_var.set(generate_password()),
+                  width=10).pack(side=tk.RIGHT, padx=(10, 0))
         
         # Buttons
-        button_frame = ttk.Frame(frame)
-        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(20, 0))
         
-        def save_account():
+        def save():
             nickname = nickname_var.get().strip()
             app = app_var.get().strip()
             category = category_var.get()
             password = password_var.get().strip()
             
             if not nickname or not app or not password:
-                messagebox.showerror("Error", "All fields are required!")
+                messagebox.showerror("Error", "All fields required")
                 return
             
-            # Normalize category
             if category.lower() in ["academic", "personal", "internship"]:
                 category = category.lower().capitalize()
             else:
                 category = "Other"
             
-            # Check if nickname already exists
             if nickname in accounts:
-                result = messagebox.askyesno(
-                    "Duplicate Nickname",
-                    f"An account with nickname '{nickname}' already exists.\n\nDo you want to overwrite it?"
-                )
-                if not result:
+                if not messagebox.askyesno("Duplicate", f"'{nickname}' exists. Overwrite?"):
                     return
             
-            # Check for duplicate data
-            duplicate_found = False
-            duplicate_nicknames = []
-            
-            for existing_nick, existing_data in accounts.items():
-                if (existing_data["app"] == app and 
-                    existing_data["category"] == category and 
-                    existing_data["password"] == password and
-                    existing_nick != nickname):
-                    duplicate_found = True
-                    duplicate_nicknames.append(existing_nick)
-            
-            if duplicate_found:
-                dup_list = "\n".join([f"  • {dup}" for dup in duplicate_nicknames])
-                result = messagebox.askyesno(
-                    "Duplicate Found",
-                    f"⚠️ An account with the exact same data already exists under:\n{dup_list}\n\nSave anyway?"
-                )
-                if not result:
-                    return
-            
-            # Save account
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-            
             accounts[nickname] = {
-                "app": app,
-                "category": category,
-                "password": password,
-                "created": current_time,
-                "last_modified": current_time
+                "app": app, "category": category, "password": password,
+                "created": current_time, "last_modified": current_time
             }
-            
             save_accounts()
             self.refresh_list()
             dialog.destroy()
-            self.status_var.set(f"✓ Account '{nickname}' saved")
+            self.status_var.set(f"✓ Added {nickname}")
         
-        ttk.Button(button_frame, text="Save", command=save_account, width=15).pack(side=tk.LEFT, padx=10)
-        ttk.Button(button_frame, text="Cancel", command=dialog.destroy, width=15).pack(side=tk.LEFT, padx=10)
-        
-        # Focus on nickname entry
-        nickname_entry.focus()
+        ttk.Button(btn_frame, text="Save", command=save).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=2)
     
     def edit_account(self):
-        """Edit the selected account"""
         if not self.current_account:
-            messagebox.showwarning("No Selection", "Please select an account first.")
             return
-        
-        # Create edit dialog
-        edit_window = tk.Toplevel(self.root)
-        edit_window.title("Edit Account")
-        edit_window.geometry("550x600")
-        edit_window.configure(bg=DarkTheme.bg_dark)
-        edit_window.transient(self.root)
-        edit_window.grab_set()
-        
-        # Get current data
-        current_data = accounts[self.current_account]
-        
-        ttk.Label(edit_window, text="Edit Account", font=('Arial', 16, 'bold')).pack(pady=10)
-        
-        # Main frame with scrollbar
-        canvas = tk.Canvas(edit_window, bg=DarkTheme.bg_dark, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(edit_window, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Form fields
-        frame = ttk.Frame(scrollable_frame, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Nickname (read-only)
-        ttk.Label(frame, text="Nickname:", font=('Arial', 10)).grid(row=0, column=0, sticky=tk.W, pady=8)
-        ttk.Label(frame, text=self.current_account, font=('Arial', 10, 'bold')).grid(row=0, column=1, sticky=tk.W, pady=8, padx=10)
-        
-        # App name
-        ttk.Label(frame, text="App Name:", font=('Arial', 10)).grid(row=1, column=0, sticky=tk.W, pady=8)
-        app_var = tk.StringVar(value=current_data['app'])
-        app_entry = ttk.Entry(frame, textvariable=app_var, width=35, font=('Arial', 10))
-        app_entry.grid(row=1, column=1, pady=8, padx=10)
-        
-        # Category
-        ttk.Label(frame, text="Category:", font=('Arial', 10)).grid(row=2, column=0, sticky=tk.W, pady=8)
-        category_var = tk.StringVar(value=current_data['category'])
-        category_combo = ttk.Combobox(frame, textvariable=category_var,
-                                       values=["Academic", "Personal", "Internship", "Other"],
-                                       state="readonly", width=32, font=('Arial', 10))
-        category_combo.grid(row=2, column=1, pady=8, padx=10)
-        
-        # Password
-        ttk.Label(frame, text="Password:", font=('Arial', 10)).grid(row=3, column=0, sticky=tk.W, pady=8)
-        
-        password_frame = ttk.Frame(frame)
-        password_frame.grid(row=3, column=1, pady=8, padx=10, sticky=tk.W)
-        
-        password_var = tk.StringVar(value=current_data['password'])
-        password_entry = ttk.Entry(password_frame, textvariable=password_var, width=25, show="•", font=('Arial', 10))
-        password_entry.pack(side=tk.LEFT)
-        
-        def generate_and_set():
-            pwd = generate_password()
-            password_var.set(pwd)
-            password_entry.config(show="")
-            show_pwd_var.set(True)
-            update_strength()
-        
-        ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
-        
-        # Show password checkbox
-        show_pwd_var = tk.BooleanVar()
-        def toggle_password_visibility():
-            if show_pwd_var.get():
-                password_entry.config(show="")
-            else:
-                password_entry.config(show="•")
-        
-        ttk.Checkbutton(frame, text="Show password", variable=show_pwd_var, 
-                       command=toggle_password_visibility).grid(row=4, column=0, columnspan=2, pady=5)
-        
-        # Live strength meter
-        strength_preview_frame = ttk.LabelFrame(frame, text="Password Strength Preview", padding="10")
-        strength_preview_frame.grid(row=5, column=0, columnspan=2, pady=15, sticky=tk.EW)
-        
-        preview_bar = ttk.Progressbar(strength_preview_frame, length=350, mode='determinate')
-        preview_bar.pack(pady=5)
-        
-        preview_label = ttk.Label(strength_preview_frame, text="", font=('Arial', 10, 'bold'))
-        preview_label.pack()
-        
-        preview_crack = ttk.Label(strength_preview_frame, text="", font=('Arial', 8))
-        preview_crack.pack()
-        
-        def update_strength(*args):
-            pwd = password_var.get()
-            if pwd:
-                feedback = get_password_feedback(pwd)
-                preview_bar['value'] = (feedback['score'] / 10) * 100
-                preview_label.config(text=f"{feedback['category']} ({feedback['score']:.1f}/10)", 
-                                    foreground=DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light))
-                crack_time = estimate_crack_time(pwd)
-                preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
-            else:
-                preview_bar['value'] = 0
-                preview_label.config(text="Enter a password")
-                preview_crack.config(text="")
-        
-        # Initial update
-        update_strength()
-        password_var.trace('w', update_strength)
-        
-        # Buttons
-        button_frame = ttk.Frame(frame)
-        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
-        
-        def save_changes():
-            # Update the account
-            accounts[self.current_account]['app'] = app_var.get()
-            accounts[self.current_account]['category'] = category_var.get()
-            accounts[self.current_account]['password'] = password_var.get()
-            accounts[self.current_account]['last_modified'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-            
-            save_accounts()
-            self.display_account_details(self.current_account)
-            self.refresh_list()
-            edit_window.destroy()
-            self.status_var.set("✓ Account updated")
-        
-        ttk.Button(button_frame, text="Save", command=save_changes, width=15).pack(side=tk.LEFT, padx=10)
-        ttk.Button(button_frame, text="Cancel", command=edit_window.destroy, width=15).pack(side=tk.LEFT, padx=10)
+        messagebox.showinfo("Edit", "Edit feature coming soon!")
     
     def delete_account(self):
-        """Delete current account with confirmation"""
         if not self.current_account:
-            messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
-        result = messagebox.askyesno(
-            "Confirm Delete",
-            f"Are you sure you want to delete '{self.current_account}'?\n\nThis cannot be undone."
-        )
-        
-        if result:
+        if messagebox.askyesno("Delete", f"Delete '{self.current_account}'?"):
             del accounts[self.current_account]
             save_accounts()
             self.current_account = None
             self.refresh_list()
-            
-            # Clear details
-            self.details_text.config(state=tk.NORMAL)
-            self.details_text.delete(1.0, tk.END)
-            self.details_text.config(state=tk.DISABLED)
-            
-            # Reset password visibility
-            self.show_passwords = False
-            
-            # Disable buttons
-            self.toggle_btn.config(state=tk.DISABLED)
-            self.edit_btn.config(state=tk.DISABLED)
-            self.delete_btn.config(state=tk.DISABLED)
-            
-            # Reset strength displays
-            self.strength_bar['value'] = 0
-            self.strength_label.config(text="")
-            self.crack_time_label.config(text="")
-            
-            self.strengths_list.config(state=tk.NORMAL)
-            self.strengths_list.delete(1.0, tk.END)
-            self.strengths_list.config(state=tk.DISABLED)
-            
-            self.issues_list.config(state=tk.NORMAL)
-            self.issues_list.delete(1.0, tk.END)
-            self.issues_list.config(state=tk.DISABLED)
-            
             self.status_var.set("✓ Account deleted")
     
     def show_password_reuse(self):
-        """Show password reuse report in a new window"""
         reused = detect_password_reuse()
-        
-        report_window = tk.Toplevel(self.root)
-        report_window.title("Password Reuse Report")
-        report_window.geometry("650x550")
-        report_window.configure(bg=DarkTheme.bg_dark)
-        report_window.transient(self.root)
-        
-        ttk.Label(report_window, text="Password Reuse Report", font=('Arial', 16, 'bold')).pack(pady=10)
-        
-        if not reused:
-            ttk.Label(report_window, text="✅ No password reuse detected!", font=('Arial', 12)).pack(pady=30)
-        else:
-            # Create text widget with scrollbar
-            frame = ttk.Frame(report_window)
-            frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-            
-            scrollbar = ttk.Scrollbar(frame)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            
-            text_widget = tk.Text(frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=('Courier', 10),
-                                  bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
-                                  bd=1, relief=tk.SUNKEN)
-            text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            
-            scrollbar.config(command=text_widget.yview)
-            
-            # Add content
-            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n")
-            
-            for i, item in enumerate(reused, 1):
-                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n")
-                text_widget.insert(tk.END, f"   Used in {item['count']} accounts:\n")
-                for acc in item['accounts']:
-                    # Get strength for each account
-                    feedback = get_password_feedback(accounts[acc]['password'])
-                    text_widget.insert(tk.END, f"   • {acc} ({accounts[acc]['app']}) - {feedback['category']}\n")
-                text_widget.insert(tk.END, "\n" + "─"*50 + "\n")
-            
-            text_widget.config(state=tk.DISABLED)
-        
-        ttk.Button(report_window, text="Close", command=report_window.destroy, width=20).pack(pady=20)
+        msg = "No reused passwords found!" if not reused else f"Found {len(reused)} reused passwords"
+        messagebox.showinfo("Password Reuse", msg)
     
     def show_password_generator(self):
-        """Show password generator tool"""
-        pwd = generate_password(24)  # Generate an extra strong password
+        pwd = generate_password(24)
         feedback = get_password_feedback(pwd)
-        
-        result = messagebox.askyesno(
-            "Password Generator",
-            f"🔐 Generated Password:\n\n{pwd}\n\n" +
-            f"Strength: {feedback['category']} ({feedback['score']:.1f}/10)\n" +
-            f"⏱️ Crack time: {estimate_crack_time(pwd)}\n\n" +
-            f"Copy to clipboard?"
-        )
-        
-        if result:
-            try:
-                pyperclip.copy(pwd)
-                self.status_var.set("✓ Password copied to clipboard!")
-                messagebox.showinfo("Success", "Password copied to clipboard!")
-            except Exception as e:
-                self.status_var.set(f"❌ Copy failed: {str(e)}")
-                messagebox.showerror("Error", f"Failed to copy password: {str(e)}")
+        messagebox.showinfo("Generated Password", f"{pwd}\n\nStrength: {feedback['category']}")
     
     def show_password_health(self):
-        """Show overall password health dashboard"""
         if not accounts:
-            messagebox.showinfo("Password Health", "No accounts to analyze.")
+            messagebox.showinfo("Health", "No accounts to analyze")
             return
-        
-        health_window = tk.Toplevel(self.root)
-        health_window.title("Password Health Dashboard")
-        health_window.geometry("650x550")
-        health_window.configure(bg=DarkTheme.bg_dark)
-        health_window.transient(self.root)
-        
-        ttk.Label(health_window, text="Password Health Dashboard", font=('Arial', 16, 'bold')).pack(pady=10)
-        
-        # Calculate statistics
-        total = len(accounts)
-        scores = []
-        categories = []
-        
-        for data in accounts.values():
-            feedback = get_password_feedback(data['password'])
-            scores.append(feedback['score'])
-            categories.append(feedback['category'])
-        
-        avg_score = sum(scores) / total if total > 0 else 0
-        
-        # Category counts
-        cat_counts = {
-            "Excellent": categories.count("Excellent"),
-            "Very Strong": categories.count("Very Strong"),
-            "Strong": categories.count("Strong"),
-            "Good": categories.count("Good"),
-            "Fair": categories.count("Fair"),
-            "Weak": categories.count("Weak"),
-            "Very Weak": categories.count("Very Weak")
-        }
-        
-        # Create stats frame
-        stats_frame = ttk.LabelFrame(health_window, text="Statistics", padding="15")
-        stats_frame.pack(fill=tk.X, padx=20, pady=10)
-        
-        ttk.Label(stats_frame, text=f"Total Accounts: {total}", font=('Arial', 11)).pack(anchor=tk.W, pady=2)
-        ttk.Label(stats_frame, text=f"Average Strength: {avg_score:.1f}/10", font=('Arial', 11)).pack(anchor=tk.W, pady=2)
-        
-        # Create breakdown frame
-        breakdown_frame = ttk.LabelFrame(health_window, text="Strength Breakdown", padding="15")
-        breakdown_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-        
-        # Create a canvas for scrolling if needed
-        canvas = tk.Canvas(breakdown_frame, bg=DarkTheme.bg_dark, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(breakdown_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Add strength categories
-        colors = {
-            "Excellent": "#2ecc71",
-            "Very Strong": "#27ae60",
-            "Strong": "#3498db",
-            "Good": "#f39c12",
-            "Fair": "#f1c40f",
-            "Weak": "#e67e22",
-            "Very Weak": "#e74c3c"
-        }
-        
-        for cat, count in cat_counts.items():
-            if count > 0:
-                frame = ttk.Frame(scrollable_frame)
-                frame.pack(fill=tk.X, pady=5)
-                
-                color_box = tk.Canvas(frame, width=20, height=20, bg=colors[cat], highlightthickness=0)
-                color_box.pack(side=tk.LEFT, padx=5)
-                
-                ttk.Label(frame, text=f"{cat}: {count} account(s)", font=('Arial', 10)).pack(side=tk.LEFT)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        ttk.Button(health_window, text="Close", command=health_window.destroy, width=20).pack(pady=20)
+        messagebox.showinfo("Health", "Health dashboard coming soon!")
     
     def show_about(self):
-        """Show about dialog"""
-        about_text = "🔐 GateKeeper Password Manager\n\n"
-        about_text += "Version 2.5.0\n\n"
-        about_text += "Your personal password manager\n"
-        about_text += "Securely store and manage all your accounts\n\n"
-        about_text += "✨ Features:\n"
-        about_text += "• Advanced password strength analysis (0-10 scale)\n"
-        about_text += "• Password Inspector with actionable tips\n"
-        about_text += "• Crack time estimation\n"
-        about_text += "• Password reuse detection\n"
-        about_text += "• Health dashboard\n"
-        about_text += "• Built-in password generator\n"
-        about_text += "• Dark mode for comfortable viewing\n\n"
-        about_text += "© 2026 GateKeeper Team\n"
-        about_text += "AI tools used responsibly to support learning"
-        
-        messagebox.showinfo("About GateKeeper", about_text)
+        about = "GateKeeper 2.5\n\nA modern password manager\nfor students and professionals"
+        messagebox.showinfo("About", about)
     
     def show_storage_warning(self):
-        """Show storage warning"""
-        warning_text = "⚠️ LOCAL STORAGE ONLY ⚠️\n\n"
-        warning_text += "Your accounts are saved ONLY on this device.\n"
-        warning_text += "If you delete this program or its files,\n"
-        warning_text += "ALL your saved accounts will be PERMANENTLY LOST.\n\n"
-        warning_text += "📁 Location: " + os.path.abspath(FILENAME) + "\n\n"
-        warning_text += "💾 To backup: Copy the accounts.json file to a safe location."
-        
-        messagebox.showwarning("Storage Warning", warning_text)
+        msg = f"Accounts stored locally at:\n{os.path.abspath(FILENAME)}"
+        messagebox.showwarning("Storage Warning", msg)
 
 # ============================================================================
 # MAIN ENTRY POINT
 # ============================================================================
 
 def main():
-    """Main entry point - launches GUI directly"""
     root = tk.Tk()
     app = GateKeeperGUI(root)
     root.mainloop()
