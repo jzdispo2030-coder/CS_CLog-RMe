@@ -371,7 +371,7 @@ class GateKeeperGUI:
         self.issues_list.config(state=tk.DISABLED)
         
         # ============================================================================
-        # SCROLLABLE BUTTON AREA - FIXED!
+        # SCROLLABLE BUTTON AREA
         # ============================================================================
         button_container = ttk.Frame(right_frame)
         button_container.pack(fill=tk.BOTH, expand=True, pady=10)
@@ -429,7 +429,7 @@ class GateKeeperGUI:
         self.delete_btn.pack(fill=tk.X, padx=2)
         
         # Add some padding at the bottom for scrolling
-        ttk.Frame(btn_frame, height=10).pack()
+        ttk.Frame(btn_frame, height=20).pack()
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -456,7 +456,8 @@ class GateKeeperGUI:
             "💡 Tip: Longer passwords are stronger than complex short ones",
             "💡 Tip: Use the Inspect Password button for detailed analysis",
             "💡 Tip: Check password health in the Tools menu",
-            "💡 Tip: Double-click an account to inspect its password"
+            "💡 Tip: Double-click an account to inspect its password",
+            "💡 Tip: Scroll down to see all action buttons"
         ]
         self.tip_label.config(text=random.choice(tips))
     
@@ -607,18 +608,12 @@ class GateKeeperGUI:
         inspector.grab_set()
         inspector.focus_set()
         
-        # Configure inspector styles
-        style = ttk.Style()
-        style.configure('Inspector.TLabel', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
-        style.configure('Inspector.TFrame', background=DarkTheme.bg_dark)
-        style.configure('Inspector.TLabelframe', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
-        
         # Header with score
-        header_frame = ttk.Frame(inspector, padding="15", style='Inspector.TFrame')
+        header_frame = ttk.Frame(inspector, padding="15")
         header_frame.pack(fill=tk.X)
         
         # Score display with color
-        score_frame = ttk.Frame(header_frame, style='Inspector.TFrame')
+        score_frame = ttk.Frame(header_frame)
         score_frame.pack(pady=5)
         
         score_color = DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light)
@@ -627,17 +622,14 @@ class GateKeeperGUI:
         score_label.pack()
         
         ttk.Label(header_frame, text=f"Password Strength: {feedback['category']}", 
-                  font=('Arial', 14, 'bold'), style='Inspector.TLabel').pack()
+                  font=('Arial', 14, 'bold')).pack()
         
         # Notebook for tabs
         notebook = ttk.Notebook(inspector)
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Configure notebook for dark mode
-        notebook.configure()
-        
         # Tab 1: Analysis
-        analysis_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
+        analysis_frame = ttk.Frame(notebook, padding="10")
         notebook.add(analysis_frame, text="Analysis")
         
         # Password info
@@ -659,23 +651,23 @@ class GateKeeperGUI:
         has_symbol = bool(re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`]", data['password']))
         
         ttk.Label(chars_frame, text=f"✓ Lowercase: {'Yes' if has_lower else 'No'}", 
-                  foreground='green' if has_lower else 'red').pack(anchor=tk.W, pady=2)
+                  foreground='#2ecc71' if has_lower else '#e74c3c').pack(anchor=tk.W, pady=2)
         ttk.Label(chars_frame, text=f"✓ Uppercase: {'Yes' if has_upper else 'No'}", 
-                  foreground='green' if has_upper else 'red').pack(anchor=tk.W, pady=2)
+                  foreground='#2ecc71' if has_upper else '#e74c3c').pack(anchor=tk.W, pady=2)
         ttk.Label(chars_frame, text=f"✓ Numbers: {'Yes' if has_digit else 'No'}", 
-                  foreground='green' if has_digit else 'red').pack(anchor=tk.W, pady=2)
+                  foreground='#2ecc71' if has_digit else '#e74c3c').pack(anchor=tk.W, pady=2)
         ttk.Label(chars_frame, text=f"✓ Symbols: {'Yes' if has_symbol else 'No'}", 
-                  foreground='green' if has_symbol else 'red').pack(anchor=tk.W, pady=2)
+                  foreground='#2ecc71' if has_symbol else '#e74c3c').pack(anchor=tk.W, pady=2)
         
         # Tab 2: Issues & Fixes
-        issues_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
+        issues_frame = ttk.Frame(notebook, padding="10")
         notebook.add(issues_frame, text="Issues & Fixes")
         
         if feedback['issues']:
             # Create canvas with scrollbar for many issues
             canvas = tk.Canvas(issues_frame, bg=DarkTheme.bg_dark, highlightthickness=0)
             scrollbar = ttk.Scrollbar(issues_frame, orient="vertical", command=canvas.yview)
-            scrollable_frame = ttk.Frame(canvas, style='Inspector.TFrame')
+            scrollable_frame = ttk.Frame(canvas)
             
             scrollable_frame.bind(
                 "<Configure>",
@@ -721,7 +713,7 @@ class GateKeeperGUI:
                       font=('Arial', 14)).pack(pady=50)
         
         # Tab 3: Suggestions
-        suggestions_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
+        suggestions_frame = ttk.Frame(notebook, padding="10")
         notebook.add(suggestions_frame, text="Suggestions")
         
         # Generate suggestions based on password
@@ -751,7 +743,7 @@ class GateKeeperGUI:
                      font=('Arial', 11)).pack(pady=20)
         
         # Tab 4: Quick Actions
-        actions_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
+        actions_frame = ttk.Frame(notebook, padding="10")
         notebook.add(actions_frame, text="Quick Actions")
         
         ttk.Label(actions_frame, text="What would you like to do?", 
@@ -1281,13 +1273,10 @@ class GateKeeperGUI:
             scrollbar.config(command=text_widget.yview)
             
             # Add content
-            text_widget.tag_config("warning", foreground=DarkTheme.accent_red, font=('Arial', 11, 'bold'))
-            text_widget.tag_config("password", foreground=DarkTheme.accent_blue, font=('Courier', 10, 'bold'))
-            
-            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n", "warning")
+            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n")
             
             for i, item in enumerate(reused, 1):
-                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n", "password")
+                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n")
                 text_widget.insert(tk.END, f"   Used in {item['count']} accounts:\n")
                 for acc in item['accounts']:
                     # Get strength for each account
@@ -1329,4 +1318,124 @@ class GateKeeperGUI:
         
         health_window = tk.Toplevel(self.root)
         health_window.title("Password Health Dashboard")
-        health_window.geometry("650
+        health_window.geometry("650x550")
+        health_window.configure(bg=DarkTheme.bg_dark)
+        health_window.transient(self.root)
+        
+        ttk.Label(health_window, text="Password Health Dashboard", font=('Arial', 16, 'bold')).pack(pady=10)
+        
+        # Calculate statistics
+        total = len(accounts)
+        scores = []
+        categories = []
+        
+        for data in accounts.values():
+            feedback = get_password_feedback(data['password'])
+            scores.append(feedback['score'])
+            categories.append(feedback['category'])
+        
+        avg_score = sum(scores) / total if total > 0 else 0
+        
+        # Category counts
+        cat_counts = {
+            "Excellent": categories.count("Excellent"),
+            "Very Strong": categories.count("Very Strong"),
+            "Strong": categories.count("Strong"),
+            "Good": categories.count("Good"),
+            "Fair": categories.count("Fair"),
+            "Weak": categories.count("Weak"),
+            "Very Weak": categories.count("Very Weak")
+        }
+        
+        # Create stats frame
+        stats_frame = ttk.LabelFrame(health_window, text="Statistics", padding="15")
+        stats_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        ttk.Label(stats_frame, text=f"Total Accounts: {total}", font=('Arial', 11)).pack(anchor=tk.W, pady=2)
+        ttk.Label(stats_frame, text=f"Average Strength: {avg_score:.1f}/10", font=('Arial', 11)).pack(anchor=tk.W, pady=2)
+        
+        # Create breakdown frame
+        breakdown_frame = ttk.LabelFrame(health_window, text="Strength Breakdown", padding="15")
+        breakdown_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # Create a canvas for scrolling if needed
+        canvas = tk.Canvas(breakdown_frame, bg=DarkTheme.bg_dark, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(breakdown_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Add strength categories
+        colors = {
+            "Excellent": "#2ecc71",
+            "Very Strong": "#27ae60",
+            "Strong": "#3498db",
+            "Good": "#f39c12",
+            "Fair": "#f1c40f",
+            "Weak": "#e67e22",
+            "Very Weak": "#e74c3c"
+        }
+        
+        for cat, count in cat_counts.items():
+            if count > 0:
+                frame = ttk.Frame(scrollable_frame)
+                frame.pack(fill=tk.X, pady=5)
+                
+                color_box = tk.Canvas(frame, width=20, height=20, bg=colors[cat], highlightthickness=0)
+                color_box.pack(side=tk.LEFT, padx=5)
+                
+                ttk.Label(frame, text=f"{cat}: {count} account(s)", font=('Arial', 10)).pack(side=tk.LEFT)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        ttk.Button(health_window, text="Close", command=health_window.destroy, width=20).pack(pady=20)
+    
+    def show_about(self):
+        """Show about dialog"""
+        about_text = "🔐 GateKeeper Password Manager\n\n"
+        about_text += "Version 2.5.0\n\n"
+        about_text += "Your personal password manager\n"
+        about_text += "Securely store and manage all your accounts\n\n"
+        about_text += "✨ Features:\n"
+        about_text += "• Advanced password strength analysis (0-10 scale)\n"
+        about_text += "• Password Inspector with actionable tips\n"
+        about_text += "• Crack time estimation\n"
+        about_text += "• Password reuse detection\n"
+        about_text += "• Health dashboard\n"
+        about_text += "• Built-in password generator\n"
+        about_text += "• Dark mode for comfortable viewing\n\n"
+        about_text += "© 2026 GateKeeper Team\n"
+        about_text += "AI tools used responsibly to support learning"
+        
+        messagebox.showinfo("About GateKeeper", about_text)
+    
+    def show_storage_warning(self):
+        """Show storage warning"""
+        warning_text = "⚠️ LOCAL STORAGE ONLY ⚠️\n\n"
+        warning_text += "Your accounts are saved ONLY on this device.\n"
+        warning_text += "If you delete this program or its files,\n"
+        warning_text += "ALL your saved accounts will be PERMANENTLY LOST.\n\n"
+        warning_text += "📁 Location: " + os.path.abspath(FILENAME) + "\n\n"
+        warning_text += "💾 To backup: Copy the accounts.json file to a safe location."
+        
+        messagebox.showwarning("Storage Warning", warning_text)
+
+# ============================================================================
+# MAIN ENTRY POINT
+# ============================================================================
+
+def main():
+    """Main entry point - launches GUI directly"""
+    root = tk.Tk()
+    app = GateKeeperGUI(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
