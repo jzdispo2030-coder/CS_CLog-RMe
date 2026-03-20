@@ -61,6 +61,35 @@ def detect_password_reuse():
     return reused_passwords
 
 # ============================================================================
+# DARK MODE COLORS
+# ============================================================================
+
+class DarkTheme:
+    bg_dark = "#1e1e1e"
+    bg_medium = "#2d2d2d"
+    bg_light = "#3c3c3c"
+    fg_light = "#ffffff"
+    fg_dim = "#cccccc"
+    accent_blue = "#007acc"
+    accent_green = "#2ecc71"
+    accent_red = "#e74c3c"
+    accent_orange = "#f39c12"
+    accent_purple = "#9b59b6"
+    border = "#555555"
+    selection = "#264f78"
+    
+    # Strength colors (for dark mode)
+    strength_colors = {
+        "Excellent": "#2ecc71",
+        "Very Strong": "#27ae60",
+        "Strong": "#3498db",
+        "Good": "#f39c12",
+        "Fair": "#f1c40f",
+        "Weak": "#e67e22",
+        "Very Weak": "#e74c3c"
+    }
+
+# ============================================================================
 # MAIN GUI APPLICATION
 # ============================================================================
 
@@ -68,7 +97,10 @@ class GateKeeperGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("GateKeeper Password Manager")
-        self.root.geometry("950x750")
+        self.root.geometry("1000x800")
+        
+        # Apply dark mode to root
+        self.root.configure(bg=DarkTheme.bg_dark)
         
         # Password visibility toggle
         self.show_passwords = False
@@ -76,24 +108,86 @@ class GateKeeperGUI:
         # Current selected account
         self.current_account = None
         
+        # Configure styles for dark mode
+        self.setup_styles()
+        
         self.setup_menu()
         self.setup_ui()
         self.show_intro()
         self.refresh_list()
     
+    def setup_styles(self):
+        """Configure ttk styles for dark mode"""
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Configure colors
+        style.configure('.', 
+                       background=DarkTheme.bg_dark,
+                       foreground=DarkTheme.fg_light,
+                       fieldbackground=DarkTheme.bg_medium,
+                       troughcolor=DarkTheme.bg_light,
+                       selectbackground=DarkTheme.selection,
+                       selectforeground=DarkTheme.fg_light)
+        
+        style.configure('TLabel', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        style.configure('TFrame', background=DarkTheme.bg_dark)
+        style.configure('TLabelframe', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        style.configure('TLabelframe.Label', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        
+        style.configure('TButton', 
+                       background=DarkTheme.bg_light,
+                       foreground=DarkTheme.fg_light,
+                       borderwidth=1,
+                       focusthickness=3,
+                       focuscolor='none')
+        style.map('TButton',
+                 background=[('active', DarkTheme.accent_blue),
+                           ('pressed', DarkTheme.bg_medium)],
+                 foreground=[('active', DarkTheme.fg_light)])
+        
+        style.configure('TEntry', 
+                       fieldbackground=DarkTheme.bg_medium,
+                       foreground=DarkTheme.fg_light,
+                       insertcolor=DarkTheme.fg_light)
+        
+        style.configure('TCombobox', 
+                       fieldbackground=DarkTheme.bg_medium,
+                       foreground=DarkTheme.fg_light,
+                       selectbackground=DarkTheme.selection)
+        
+        style.configure('TScrollbar',
+                       background=DarkTheme.bg_light,
+                       troughcolor=DarkTheme.bg_medium,
+                       arrowcolor=DarkTheme.fg_light)
+        
+        style.configure('TProgressbar',
+                       background=DarkTheme.accent_green,
+                       troughcolor=DarkTheme.bg_medium)
+        
+        style.configure('TMenubar', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        style.configure('TMenu', background=DarkTheme.bg_medium, foreground=DarkTheme.fg_light)
+        
+        # Configure PanedWindow
+        style.configure('TPanedwindow', background=DarkTheme.border)
+    
     def setup_menu(self):
         """Create menu bar"""
-        menubar = tk.Menu(self.root)
+        menubar = tk.Menu(self.root, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                         activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
         self.root.config(menu=menubar)
         
         # File menu
-        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                           activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Add Account", command=self.add_account_dialog, accelerator="Ctrl+N")
+        file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         
         # View menu
-        view_menu = tk.Menu(menubar, tearoff=0)
+        view_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                           activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
         menubar.add_cascade(label="View", menu=view_menu)
         view_menu.add_command(label="Refresh List", command=self.refresh_list)
         view_menu.add_separator()
@@ -104,14 +198,16 @@ class GateKeeperGUI:
         view_menu.add_command(label="Show Other", command=lambda: self.set_category_filter("Other"))
         
         # Tools menu
-        tools_menu = tk.Menu(menubar, tearoff=0)
+        tools_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                            activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
         menubar.add_cascade(label="Tools", menu=tools_menu)
         tools_menu.add_command(label="Password Reuse Report", command=self.show_password_reuse)
         tools_menu.add_command(label="Generate Strong Password", command=self.show_password_generator)
         tools_menu.add_command(label="Password Health Check", command=self.show_password_health)
         
         # Help menu
-        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu = tk.Menu(menubar, tearoff=0, bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                           activebackground=DarkTheme.accent_blue, activeforeground=DarkTheme.fg_light)
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="About", command=self.show_about)
         help_menu.add_command(label="Local Storage Warning", command=self.show_storage_warning)
@@ -124,7 +220,8 @@ class GateKeeperGUI:
         top_frame = ttk.Frame(self.root, padding="10")
         top_frame.pack(fill=tk.X)
         
-        self.welcome_label = ttk.Label(top_frame, text="GateKeeper Password Manager", font=('Arial', 18, 'bold'))
+        self.welcome_label = ttk.Label(top_frame, text="GateKeeper Password Manager", 
+                                       font=('Arial', 18, 'bold'))
         self.welcome_label.pack()
         
         self.stats_label = ttk.Label(top_frame, text="", font=('Arial', 11))
@@ -134,7 +231,9 @@ class GateKeeperGUI:
         warning_frame = ttk.Frame(top_frame)
         warning_frame.pack(fill=tk.X, pady=5)
         
-        self.warning_text = tk.Text(warning_frame, height=2, width=80, font=('Arial', 9), fg='#e74c3c', wrap=tk.WORD)
+        self.warning_text = tk.Text(warning_frame, height=2, width=80, font=('Arial', 9), 
+                                    bg=DarkTheme.bg_medium, fg=DarkTheme.accent_red, 
+                                    wrap=tk.WORD, bd=1, relief=tk.SUNKEN)
         self.warning_text.pack(fill=tk.X)
         self.warning_text.insert(1.0, "⚠️ LOCAL STORAGE ONLY: Accounts saved on this device only. Data lost if program files are deleted.")
         self.warning_text.config(state=tk.DISABLED)
@@ -189,7 +288,11 @@ class GateKeeperGUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.accounts_list = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                                        font=('Courier', 10), selectmode=tk.SINGLE, height=20)
+                                        font=('Courier', 10), selectmode=tk.SINGLE, height=20,
+                                        bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                                        selectbackground=DarkTheme.selection,
+                                        selectforeground=DarkTheme.fg_light,
+                                        bd=1, relief=tk.SUNKEN)
         self.accounts_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.accounts_list.bind('<<ListboxSelect>>', self.on_account_select)
         self.accounts_list.bind('<Double-Button-1>', lambda e: self.inspect_password())
@@ -215,7 +318,9 @@ class GateKeeperGUI:
         
         self.details_text = tk.Text(details_frame, yscrollcommand=details_scrollbar.set,
                                     height=10, width=40, font=('Courier', 10), wrap=tk.WORD,
-                                    bg='#f8f9fa', relief=tk.GROOVE, borderwidth=2)
+                                    bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                                    insertbackground=DarkTheme.fg_light,
+                                    bd=1, relief=tk.SUNKEN)
         self.details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.details_text.config(state=tk.DISABLED)
         
@@ -249,7 +354,8 @@ class GateKeeperGUI:
         
         ttk.Label(strengths_frame, text="✅ Strengths:", font=('Arial', 9, 'bold')).pack(anchor=tk.W)
         self.strengths_list = tk.Text(strengths_frame, height=2, width=40, font=('Arial', 8), 
-                                      wrap=tk.WORD, bg='#f0fff0', fg='#27ae60')
+                                      wrap=tk.WORD, bg=DarkTheme.bg_medium, fg=DarkTheme.accent_green,
+                                      bd=1, relief=tk.SUNKEN)
         self.strengths_list.pack(fill=tk.X, pady=2)
         self.strengths_list.config(state=tk.DISABLED)
         
@@ -259,17 +365,40 @@ class GateKeeperGUI:
         
         ttk.Label(issues_frame, text="⚠️ Issues to fix:", font=('Arial', 9, 'bold')).pack(anchor=tk.W)
         self.issues_list = tk.Text(issues_frame, height=2, width=40, font=('Arial', 8),
-                                   wrap=tk.WORD, bg='#fff0f0', fg='#e74c3c')
+                                   wrap=tk.WORD, bg=DarkTheme.bg_medium, fg=DarkTheme.accent_red,
+                                   bd=1, relief=tk.SUNKEN)
         self.issues_list.pack(fill=tk.X, pady=2)
         self.issues_list.config(state=tk.DISABLED)
         
-        # Action buttons
-        btn_frame = ttk.Frame(right_frame)
-        btn_frame.pack(fill=tk.X, pady=10)
+        # ============================================================================
+        # SCROLLABLE BUTTON AREA - FIXED!
+        # ============================================================================
+        button_container = ttk.Frame(right_frame)
+        button_container.pack(fill=tk.BOTH, expand=True, pady=10)
+        
+        # Create canvas and scrollbar for buttons
+        button_canvas = tk.Canvas(button_container, bg=DarkTheme.bg_dark, highlightthickness=0)
+        button_scrollbar = ttk.Scrollbar(button_container, orient="vertical", command=button_canvas.yview)
+        button_scrollable_frame = ttk.Frame(button_canvas)
+        
+        button_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: button_canvas.configure(scrollregion=button_canvas.bbox("all"))
+        )
+        
+        button_canvas.create_window((0, 0), window=button_scrollable_frame, anchor="n")
+        button_canvas.configure(yscrollcommand=button_scrollbar.set)
+        
+        button_canvas.pack(side="left", fill="both", expand=True)
+        button_scrollbar.pack(side="right", fill="y")
+        
+        # Action buttons inside scrollable frame
+        btn_frame = ttk.Frame(button_scrollable_frame)
+        btn_frame.pack(fill=tk.BOTH, expand=True, padx=5)
         
         # First row
         row1_frame = ttk.Frame(btn_frame)
-        row1_frame.pack(fill=tk.X, pady=2)
+        row1_frame.pack(fill=tk.X, pady=3)
         
         self.inspect_btn = ttk.Button(row1_frame, text="🔍 Inspect Password", 
                                    command=self.inspect_password)
@@ -281,7 +410,7 @@ class GateKeeperGUI:
         
         # Second row
         row2_frame = ttk.Frame(btn_frame)
-        row2_frame.pack(fill=tk.X, pady=2)
+        row2_frame.pack(fill=tk.X, pady=3)
         
         self.toggle_btn = ttk.Button(row2_frame, text="👁️ Show Password", 
                                      command=self.toggle_password, state=tk.DISABLED)
@@ -293,11 +422,14 @@ class GateKeeperGUI:
         
         # Third row
         row3_frame = ttk.Frame(btn_frame)
-        row3_frame.pack(fill=tk.X, pady=2)
+        row3_frame.pack(fill=tk.X, pady=3)
         
         self.delete_btn = ttk.Button(row3_frame, text="🗑️ Delete Account", 
                                      command=self.delete_account, state=tk.DISABLED)
         self.delete_btn.pack(fill=tk.X, padx=2)
+        
+        # Add some padding at the bottom for scrolling
+        ttk.Frame(btn_frame, height=10).pack()
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -425,7 +557,7 @@ class GateKeeperGUI:
         # Update strength meter
         self.strength_bar['value'] = (feedback['score'] / 10) * 100
         self.strength_label.config(text=f"{feedback['category']} ({feedback['score']:.1f}/10)", 
-                                   foreground=feedback['color'])
+                                   foreground=DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light))
         
         # Update crack time estimate
         crack_time = estimate_crack_time(data['password'])
@@ -466,36 +598,46 @@ class GateKeeperGUI:
         data = accounts[self.current_account]
         feedback = get_password_feedback(data['password'])
         
-        # Create inspector window
+        # Create inspector window with dark mode
         inspector = tk.Toplevel(self.root)
         inspector.title(f"Password Inspector - {self.current_account}")
-        inspector.geometry("550x650")
+        inspector.geometry("600x700")
+        inspector.configure(bg=DarkTheme.bg_dark)
         inspector.transient(self.root)
         inspector.grab_set()
         inspector.focus_set()
         
+        # Configure inspector styles
+        style = ttk.Style()
+        style.configure('Inspector.TLabel', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        style.configure('Inspector.TFrame', background=DarkTheme.bg_dark)
+        style.configure('Inspector.TLabelframe', background=DarkTheme.bg_dark, foreground=DarkTheme.fg_light)
+        
         # Header with score
-        header_frame = ttk.Frame(inspector, padding="15")
+        header_frame = ttk.Frame(inspector, padding="15", style='Inspector.TFrame')
         header_frame.pack(fill=tk.X)
         
         # Score display with color
-        score_frame = ttk.Frame(header_frame)
+        score_frame = ttk.Frame(header_frame, style='Inspector.TFrame')
         score_frame.pack(pady=5)
         
-        score_color = feedback['color']
+        score_color = DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light)
         score_label = tk.Label(score_frame, text=f"{feedback['score']:.1f}/10", 
-                               font=('Arial', 24, 'bold'), fg=score_color, bg='white')
+                               font=('Arial', 24, 'bold'), fg=score_color, bg=DarkTheme.bg_dark)
         score_label.pack()
         
         ttk.Label(header_frame, text=f"Password Strength: {feedback['category']}", 
-                  font=('Arial', 14, 'bold')).pack()
+                  font=('Arial', 14, 'bold'), style='Inspector.TLabel').pack()
         
         # Notebook for tabs
         notebook = ttk.Notebook(inspector)
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
+        # Configure notebook for dark mode
+        notebook.configure()
+        
         # Tab 1: Analysis
-        analysis_frame = ttk.Frame(notebook, padding="10")
+        analysis_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
         notebook.add(analysis_frame, text="Analysis")
         
         # Password info
@@ -526,14 +668,14 @@ class GateKeeperGUI:
                   foreground='green' if has_symbol else 'red').pack(anchor=tk.W, pady=2)
         
         # Tab 2: Issues & Fixes
-        issues_frame = ttk.Frame(notebook, padding="10")
+        issues_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
         notebook.add(issues_frame, text="Issues & Fixes")
         
         if feedback['issues']:
             # Create canvas with scrollbar for many issues
-            canvas = tk.Canvas(issues_frame, highlightthickness=0)
+            canvas = tk.Canvas(issues_frame, bg=DarkTheme.bg_dark, highlightthickness=0)
             scrollbar = ttk.Scrollbar(issues_frame, orient="vertical", command=canvas.yview)
-            scrollable_frame = ttk.Frame(canvas)
+            scrollable_frame = ttk.Frame(canvas, style='Inspector.TFrame')
             
             scrollable_frame.bind(
                 "<Configure>",
@@ -550,7 +692,7 @@ class GateKeeperGUI:
                 issue_card = ttk.LabelFrame(scrollable_frame, text=f"Issue {i}", padding="10")
                 issue_card.pack(fill=tk.X, pady=5, padx=5)
                 
-                ttk.Label(issue_card, text=issue, wraplength=400, font=('Arial', 10)).pack(anchor=tk.W, pady=5)
+                ttk.Label(issue_card, text=issue, wraplength=450, font=('Arial', 10)).pack(anchor=tk.W, pady=5)
                 
                 # Suggest fix based on issue
                 if "uppercase" in issue.lower():
@@ -579,7 +721,7 @@ class GateKeeperGUI:
                       font=('Arial', 14)).pack(pady=50)
         
         # Tab 3: Suggestions
-        suggestions_frame = ttk.Frame(notebook, padding="10")
+        suggestions_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
         notebook.add(suggestions_frame, text="Suggestions")
         
         # Generate suggestions based on password
@@ -603,13 +745,13 @@ class GateKeeperGUI:
         if suggestions:
             for suggestion in suggestions:
                 ttk.Label(suggestions_frame, text=suggestion, 
-                         wraplength=450, font=('Arial', 10)).pack(anchor=tk.W, pady=3)
+                         wraplength=500, font=('Arial', 10)).pack(anchor=tk.W, pady=3)
         else:
             ttk.Label(suggestions_frame, text="Your password looks great! No suggestions needed.", 
                      font=('Arial', 11)).pack(pady=20)
         
         # Tab 4: Quick Actions
-        actions_frame = ttk.Frame(notebook, padding="10")
+        actions_frame = ttk.Frame(notebook, padding="10", style='Inspector.TFrame')
         notebook.add(actions_frame, text="Quick Actions")
         
         ttk.Label(actions_frame, text="What would you like to do?", 
@@ -650,10 +792,11 @@ class GateKeeperGUI:
         for _ in range(3):
             suggestions.append(generate_password(16))
         
-        # Create suggestion dialog
+        # Create suggestion dialog with dark mode
         dialog = tk.Toplevel(parent_window)
         dialog.title("Password Suggestions")
-        dialog.geometry("450x350")
+        dialog.geometry("500x400")
+        dialog.configure(bg=DarkTheme.bg_dark)
         dialog.transient(parent_window)
         dialog.grab_set()
         
@@ -745,14 +888,15 @@ class GateKeeperGUI:
         """Open dialog to add a new account"""
         dialog = tk.Toplevel(self.root)
         dialog.title("Add New Account")
-        dialog.geometry("500x550")
+        dialog.geometry("550x600")
+        dialog.configure(bg=DarkTheme.bg_dark)
         dialog.transient(self.root)
         dialog.grab_set()
         
         ttk.Label(dialog, text="Add New Account", font=('Arial', 16, 'bold')).pack(pady=10)
         
         # Main frame with scrollbar for better UX
-        canvas = tk.Canvas(dialog)
+        canvas = tk.Canvas(dialog, bg=DarkTheme.bg_dark, highlightthickness=0)
         scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -841,7 +985,7 @@ class GateKeeperGUI:
                 feedback = get_password_feedback(pwd)
                 preview_bar['value'] = (feedback['score'] / 10) * 100
                 preview_label.config(text=f"{feedback['category']} ({feedback['score']:.1f}/10)", 
-                                    foreground=feedback['color'])
+                                    foreground=DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light))
                 crack_time = estimate_crack_time(pwd)
                 preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
             else:
@@ -933,7 +1077,8 @@ class GateKeeperGUI:
         # Create edit dialog
         edit_window = tk.Toplevel(self.root)
         edit_window.title("Edit Account")
-        edit_window.geometry("500x550")
+        edit_window.geometry("550x600")
+        edit_window.configure(bg=DarkTheme.bg_dark)
         edit_window.transient(self.root)
         edit_window.grab_set()
         
@@ -942,7 +1087,24 @@ class GateKeeperGUI:
         
         ttk.Label(edit_window, text="Edit Account", font=('Arial', 16, 'bold')).pack(pady=10)
         
-        frame = ttk.Frame(edit_window, padding="20")
+        # Main frame with scrollbar
+        canvas = tk.Canvas(edit_window, bg=DarkTheme.bg_dark, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(edit_window, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Form fields
+        frame = ttk.Frame(scrollable_frame, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
         
         # Nickname (read-only)
@@ -1012,7 +1174,7 @@ class GateKeeperGUI:
                 feedback = get_password_feedback(pwd)
                 preview_bar['value'] = (feedback['score'] / 10) * 100
                 preview_label.config(text=f"{feedback['category']} ({feedback['score']:.1f}/10)", 
-                                    foreground=feedback['color'])
+                                    foreground=DarkTheme.strength_colors.get(feedback['category'], DarkTheme.fg_light))
                 crack_time = estimate_crack_time(pwd)
                 preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
             else:
@@ -1095,7 +1257,8 @@ class GateKeeperGUI:
         
         report_window = tk.Toplevel(self.root)
         report_window.title("Password Reuse Report")
-        report_window.geometry("600x500")
+        report_window.geometry("650x550")
+        report_window.configure(bg=DarkTheme.bg_dark)
         report_window.transient(self.root)
         
         ttk.Label(report_window, text="Password Reuse Report", font=('Arial', 16, 'bold')).pack(pady=10)
@@ -1110,16 +1273,21 @@ class GateKeeperGUI:
             scrollbar = ttk.Scrollbar(frame)
             scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             
-            text_widget = tk.Text(frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=('Courier', 10))
+            text_widget = tk.Text(frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=('Courier', 10),
+                                  bg=DarkTheme.bg_medium, fg=DarkTheme.fg_light,
+                                  bd=1, relief=tk.SUNKEN)
             text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
             scrollbar.config(command=text_widget.yview)
             
             # Add content
-            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n")
+            text_widget.tag_config("warning", foreground=DarkTheme.accent_red, font=('Arial', 11, 'bold'))
+            text_widget.tag_config("password", foreground=DarkTheme.accent_blue, font=('Courier', 10, 'bold'))
+            
+            text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n", "warning")
             
             for i, item in enumerate(reused, 1):
-                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n")
+                text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n", "password")
                 text_widget.insert(tk.END, f"   Used in {item['count']} accounts:\n")
                 for acc in item['accounts']:
                     # Get strength for each account
@@ -1161,122 +1329,4 @@ class GateKeeperGUI:
         
         health_window = tk.Toplevel(self.root)
         health_window.title("Password Health Dashboard")
-        health_window.geometry("600x500")
-        health_window.transient(self.root)
-        
-        ttk.Label(health_window, text="Password Health Dashboard", font=('Arial', 16, 'bold')).pack(pady=10)
-        
-        # Calculate statistics
-        total = len(accounts)
-        scores = []
-        categories = []
-        
-        for data in accounts.values():
-            feedback = get_password_feedback(data['password'])
-            scores.append(feedback['score'])
-            categories.append(feedback['category'])
-        
-        avg_score = sum(scores) / total if total > 0 else 0
-        
-        # Category counts
-        cat_counts = {
-            "Excellent": categories.count("Excellent"),
-            "Very Strong": categories.count("Very Strong"),
-            "Strong": categories.count("Strong"),
-            "Good": categories.count("Good"),
-            "Fair": categories.count("Fair"),
-            "Weak": categories.count("Weak"),
-            "Very Weak": categories.count("Very Weak")
-        }
-        
-        # Create stats frame
-        stats_frame = ttk.LabelFrame(health_window, text="Statistics", padding="15")
-        stats_frame.pack(fill=tk.X, padx=20, pady=10)
-        
-        ttk.Label(stats_frame, text=f"Total Accounts: {total}", font=('Arial', 11)).pack(anchor=tk.W, pady=2)
-        ttk.Label(stats_frame, text=f"Average Strength: {avg_score:.1f}/10", font=('Arial', 11)).pack(anchor=tk.W, pady=2)
-        
-        # Create breakdown frame
-        breakdown_frame = ttk.LabelFrame(health_window, text="Strength Breakdown", padding="15")
-        breakdown_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-        
-        # Create a canvas for scrolling if needed
-        canvas = tk.Canvas(breakdown_frame)
-        scrollbar = ttk.Scrollbar(breakdown_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Add strength categories
-        colors = {
-            "Excellent": "#2ecc71",
-            "Very Strong": "#27ae60",
-            "Strong": "#3498db",
-            "Good": "#f39c12",
-            "Fair": "#f1c40f",
-            "Weak": "#e67e22",
-            "Very Weak": "#e74c3c"
-        }
-        
-        for cat, count in cat_counts.items():
-            if count > 0:
-                frame = ttk.Frame(scrollable_frame)
-                frame.pack(fill=tk.X, pady=5)
-                
-                color_box = tk.Canvas(frame, width=20, height=20, bg=colors[cat], highlightthickness=0)
-                color_box.pack(side=tk.LEFT, padx=5)
-                
-                ttk.Label(frame, text=f"{cat}: {count} account(s)", font=('Arial', 10)).pack(side=tk.LEFT)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        ttk.Button(health_window, text="Close", command=health_window.destroy, width=20).pack(pady=20)
-    
-    def show_about(self):
-        """Show about dialog"""
-        about_text = "🔐 GateKeeper Password Manager\n\n"
-        about_text += "Version 2.5.0\n\n"
-        about_text += "Your personal password manager\n"
-        about_text += "Securely store and manage all your accounts\n\n"
-        about_text += "✨ Features:\n"
-        about_text += "• Advanced password strength analysis (0-10 scale)\n"
-        about_text += "• Password Inspector with actionable tips\n"
-        about_text += "• Crack time estimation\n"
-        about_text += "• Password reuse detection\n"
-        about_text += "• Health dashboard\n"
-        about_text += "• Built-in password generator\n\n"
-        about_text += "© 2026 GateKeeper Team\n"
-        about_text += "AI tools used responsibly to support learning"
-        
-        messagebox.showinfo("About GateKeeper", about_text)
-    
-    def show_storage_warning(self):
-        """Show storage warning"""
-        warning_text = "⚠️ LOCAL STORAGE ONLY ⚠️\n\n"
-        warning_text += "Your accounts are saved ONLY on this device.\n"
-        warning_text += "If you delete this program or its files,\n"
-        warning_text += "ALL your saved accounts will be PERMANENTLY LOST.\n\n"
-        warning_text += "📁 Location: " + os.path.abspath(FILENAME) + "\n\n"
-        warning_text += "💾 To backup: Copy the accounts.json file to a safe location."
-        
-        messagebox.showwarning("Storage Warning", warning_text)
-
-# ============================================================================
-# MAIN ENTRY POINT
-# ============================================================================
-
-def main():
-    """Main entry point - launches GUI directly"""
-    root = tk.Tk()
-    app = GateKeeperGUI(root)
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
+        health_window.geometry("650
