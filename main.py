@@ -4,6 +4,7 @@ import json
 import os
 import random
 import string
+import re
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -12,7 +13,7 @@ from tkinter import ttk, messagebox
 # Licensed under BSD-3-Clause - see LICENSE-pyperclip.txt
 import pyperclip
 
-from password_checker import check_password_strength, get_password_feedback, get_strength_color, estimate_crack_time
+from password_checker import check_password_strength, get_password_feedback, estimate_crack_time
 
 FILENAME = "accounts.json"
 
@@ -191,7 +192,7 @@ class GateKeeperGUI:
                                         font=('Courier', 10), selectmode=tk.SINGLE, height=20)
         self.accounts_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.accounts_list.bind('<<ListboxSelect>>', self.on_account_select)
-        self.accounts_list.bind('<Double-Button-1>', lambda e: self.view_account_details())
+        self.accounts_list.bind('<Double-Button-1>', lambda e: self.inspect_password())
         
         scrollbar.config(command=self.accounts_list.yview)
         
@@ -270,12 +271,12 @@ class GateKeeperGUI:
         row1_frame = ttk.Frame(btn_frame)
         row1_frame.pack(fill=tk.X, pady=2)
         
-        self.view_btn = ttk.Button(row1_frame, text="👁️ View Details", 
-                                   command=self.view_account_details, state=tk.NORMAL)
-        self.view_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        self.inspect_btn = ttk.Button(row1_frame, text="🔍 Inspect Password", 
+                                   command=self.inspect_password)
+        self.inspect_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         self.copy_btn = ttk.Button(row1_frame, text="📋 Copy Password", 
-                                   command=self.copy_password, state=tk.NORMAL)
+                                   command=self.copy_password)
         self.copy_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         # Second row
@@ -321,10 +322,9 @@ class GateKeeperGUI:
             "💡 Tip: Mix uppercase, lowercase, numbers, and symbols",
             "💡 Tip: Never reuse passwords across different accounts",
             "💡 Tip: Longer passwords are stronger than complex short ones",
-            "💡 Tip: A 20-character password is exponentially stronger than 8",
-            "💡 Tip: Use the password generator for unbreakable passwords",
+            "💡 Tip: Use the Inspect Password button for detailed analysis",
             "💡 Tip: Check password health in the Tools menu",
-            "💡 Tip: Avoid using personal info like birthdays or names"
+            "💡 Tip: Double-click an account to inspect its password"
         ]
         self.tip_label.config(text=random.choice(tips))
     
@@ -457,37 +457,243 @@ class GateKeeperGUI:
         else:
             self.toggle_btn.config(text="👁️ Show Password")
     
-    def view_account_details(self):
-        """Show account details in a new window"""
+    def inspect_password(self):
+        """Open detailed password inspector with actionable tips"""
         if not self.current_account:
             messagebox.showwarning("No Selection", "Please select an account first.")
             return
         
-        # Check if password has been revealed
-        if not self.show_passwords:
-            messagebox.showwarning(
-                "Password Hidden", 
-                "🔒 Password is hidden.\n\nPlease click 'Show Password' first to reveal the password before viewing details."
-            )
-            return
-        
         data = accounts[self.current_account]
-        
-        # Get feedback for display
         feedback = get_password_feedback(data['password'])
         
-        details = f"🔐 Account Details\n"
-        details += "═" * 50 + "\n\n"
-        details += f"📝 Nickname: {self.current_account}\n"
-        details += f"📱 App: {data['app']}\n"
-        details += f"📂 Category: {data['category']}\n"
-        details += f"🔑 Password: {data['password']}\n"
-        details += f"📅 Created: {data.get('created', 'Unknown')}\n"
-        details += f"🕒 Modified: {data.get('last_modified', 'Unknown')}\n\n"
-        details += f"🔒 Password Strength: {feedback['category']} ({feedback['score']:.1f}/10)\n"
-        details += f"⏱️ Crack time: {estimate_crack_time(data['password'])}"
+        # Create inspector window
+        inspector = tk.Toplevel(self.root)
+        inspector.title(f"Password Inspector - {self.current_account}")
+        inspector.geometry("550x650")
+        inspector.transient(self.root)
+        inspector.grab_set()
+        inspector.focus_set()
         
-        messagebox.showinfo("Account Details", details)
+        # Header with score
+        header_frame = ttk.Frame(inspector, padding="15")
+        header_frame.pack(fill=tk.X)
+        
+        # Score display with color
+        score_frame = ttk.Frame(header_frame)
+        score_frame.pack(pady=5)
+        
+        score_color = feedback['color']
+        score_label = tk.Label(score_frame, text=f"{feedback['score']:.1f}/10", 
+                               font=('Arial', 24, 'bold'), fg=score_color, bg='white')
+        score_label.pack()
+        
+        ttk.Label(header_frame, text=f"Password Strength: {feedback['category']}", 
+                  font=('Arial', 14, 'bold')).pack()
+        
+        # Notebook for tabs
+        notebook = ttk.Notebook(inspector)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Tab 1: Analysis
+        analysis_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(analysis_frame, text="Analysis")
+        
+        # Password info
+        info_frame = ttk.LabelFrame(analysis_frame, text="Password Information", padding="10")
+        info_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(info_frame, text=f"Length: {len(data['password'])} characters", 
+                  font=('Arial', 10)).pack(anchor=tk.W, pady=2)
+        ttk.Label(info_frame, text=f"Crack Time: {estimate_crack_time(data['password'])}", 
+                  font=('Arial', 10)).pack(anchor=tk.W, pady=2)
+        
+        # Character breakdown
+        chars_frame = ttk.LabelFrame(analysis_frame, text="Character Breakdown", padding="10")
+        chars_frame.pack(fill=tk.X, pady=5)
+        
+        has_lower = bool(re.search(r"[a-z]", data['password']))
+        has_upper = bool(re.search(r"[A-Z]", data['password']))
+        has_digit = bool(re.search(r"[0-9]", data['password']))
+        has_symbol = bool(re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`]", data['password']))
+        
+        ttk.Label(chars_frame, text=f"✓ Lowercase: {'Yes' if has_lower else 'No'}", 
+                  foreground='green' if has_lower else 'red').pack(anchor=tk.W, pady=2)
+        ttk.Label(chars_frame, text=f"✓ Uppercase: {'Yes' if has_upper else 'No'}", 
+                  foreground='green' if has_upper else 'red').pack(anchor=tk.W, pady=2)
+        ttk.Label(chars_frame, text=f"✓ Numbers: {'Yes' if has_digit else 'No'}", 
+                  foreground='green' if has_digit else 'red').pack(anchor=tk.W, pady=2)
+        ttk.Label(chars_frame, text=f"✓ Symbols: {'Yes' if has_symbol else 'No'}", 
+                  foreground='green' if has_symbol else 'red').pack(anchor=tk.W, pady=2)
+        
+        # Tab 2: Issues & Fixes
+        issues_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(issues_frame, text="Issues & Fixes")
+        
+        if feedback['issues']:
+            # Create canvas with scrollbar for many issues
+            canvas = tk.Canvas(issues_frame, highlightthickness=0)
+            scrollbar = ttk.Scrollbar(issues_frame, orient="vertical", command=canvas.yview)
+            scrollable_frame = ttk.Frame(canvas)
+            
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+            
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            
+            for i, issue in enumerate(feedback['issues'], 1):
+                issue_card = ttk.LabelFrame(scrollable_frame, text=f"Issue {i}", padding="10")
+                issue_card.pack(fill=tk.X, pady=5, padx=5)
+                
+                ttk.Label(issue_card, text=issue, wraplength=400, font=('Arial', 10)).pack(anchor=tk.W, pady=5)
+                
+                # Suggest fix based on issue
+                if "uppercase" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Add capital letters (A-Z)", 
+                              foreground="#3498db").pack(anchor=tk.W)
+                elif "lowercase" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Add lowercase letters (a-z)", 
+                              foreground="#3498db").pack(anchor=tk.W)
+                elif "number" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Add numbers (0-9)", 
+                              foreground="#3498db").pack(anchor=tk.W)
+                elif "symbol" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Add symbols (!@#$%)", 
+                              foreground="#3498db").pack(anchor=tk.W)
+                elif "short" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Make password longer (12+ chars)", 
+                              foreground="#3498db").pack(anchor=tk.W)
+                elif "common" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Avoid common words or patterns", 
+                              foreground="#3498db").pack(anchor=tk.W)
+                elif "repeated" in issue.lower():
+                    ttk.Label(issue_card, text="💡 Fix: Use more unique characters", 
+                              foreground="#3498db").pack(anchor=tk.W)
+        else:
+            ttk.Label(issues_frame, text="✅ No issues found! Great password!", 
+                      font=('Arial', 14)).pack(pady=50)
+        
+        # Tab 3: Suggestions
+        suggestions_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(suggestions_frame, text="Suggestions")
+        
+        # Generate suggestions based on password
+        ttk.Label(suggestions_frame, text="💡 Improvement Ideas:", 
+                  font=('Arial', 12, 'bold')).pack(anchor=tk.W, pady=10)
+        
+        suggestions = []
+        if len(data['password']) < 12:
+            suggestions.append("• Increase length to 12+ characters for better security")
+        if len(data['password']) < 16:
+            suggestions.append("• For excellent security, use 16+ characters")
+        if not has_upper or not has_lower:
+            suggestions.append("• Mix uppercase and lowercase letters")
+        if not has_digit:
+            suggestions.append("• Add numbers to increase complexity")
+        if not has_symbol:
+            suggestions.append("• Add symbols (!@#$%) for extra security")
+        if len(set(data['password'])) < len(data['password']) * 0.6:
+            suggestions.append("• Use more unique characters, avoid repetition")
+        
+        if suggestions:
+            for suggestion in suggestions:
+                ttk.Label(suggestions_frame, text=suggestion, 
+                         wraplength=450, font=('Arial', 10)).pack(anchor=tk.W, pady=3)
+        else:
+            ttk.Label(suggestions_frame, text="Your password looks great! No suggestions needed.", 
+                     font=('Arial', 11)).pack(pady=20)
+        
+        # Tab 4: Quick Actions
+        actions_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(actions_frame, text="Quick Actions")
+        
+        ttk.Label(actions_frame, text="What would you like to do?", 
+                  font=('Arial', 12, 'bold')).pack(pady=10)
+        
+        action_btn_frame = ttk.Frame(actions_frame)
+        action_btn_frame.pack(pady=20)
+        
+        ttk.Button(action_btn_frame, text="🔄 Generate New Password", 
+                  command=lambda: self.suggest_better_password(data['password'], inspector),
+                  width=25).pack(pady=5)
+        
+        ttk.Button(action_btn_frame, text="📋 Copy to Clipboard", 
+                  command=lambda: self.copy_password_from_inspector(inspector),
+                  width=25).pack(pady=5)
+        
+        ttk.Button(action_btn_frame, text="✏️ Edit Account", 
+                  command=lambda: [inspector.destroy(), self.edit_account()],
+                  width=25).pack(pady=5)
+        
+        # Close button at bottom
+        ttk.Button(inspector, text="Close", command=inspector.destroy, width=20).pack(pady=10)
+    
+    def copy_password_from_inspector(self, inspector):
+        """Copy password from inspector window"""
+        if self.current_account:
+            password = accounts[self.current_account]['password']
+            try:
+                pyperclip.copy(password)
+                self.status_var.set("✓ Password copied to clipboard!")
+                messagebox.showinfo("Success", "Password copied to clipboard!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to copy: {str(e)}")
+    
+    def suggest_better_password(self, current_password, parent_window):
+        """Suggest better passwords"""
+        suggestions = []
+        for _ in range(3):
+            suggestions.append(generate_password(16))
+        
+        # Create suggestion dialog
+        dialog = tk.Toplevel(parent_window)
+        dialog.title("Password Suggestions")
+        dialog.geometry("450x350")
+        dialog.transient(parent_window)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="Try one of these strong passwords:", 
+                  font=('Arial', 12, 'bold')).pack(pady=15)
+        
+        frame = ttk.Frame(dialog)
+        frame.pack(fill=tk.BOTH, expand=True, padx=20)
+        
+        for i, pwd in enumerate(suggestions):
+            pwd_frame = ttk.LabelFrame(frame, text=f"Option {i+1}", padding="10")
+            pwd_frame.pack(fill=tk.X, pady=5)
+            
+            ttk.Label(pwd_frame, text=pwd, font=('Courier', 10)).pack(side=tk.LEFT, padx=5)
+            ttk.Button(pwd_frame, text="Copy & Use", 
+                      command=lambda p=pwd: self.use_suggested_password(p, dialog)).pack(side=tk.RIGHT)
+        
+        ttk.Button(dialog, text="Cancel", command=dialog.destroy, width=15).pack(pady=15)
+    
+    def use_suggested_password(self, password, dialog):
+        """Use a suggested password"""
+        try:
+            pyperclip.copy(password)
+            dialog.destroy()
+            
+            result = messagebox.askyesno(
+                "Use This Password?",
+                f"Password copied to clipboard!\n\nPassword: {password}\n\n" +
+                "Would you like to update the current account with this password?"
+            )
+            
+            if result and self.current_account:
+                accounts[self.current_account]['password'] = password
+                accounts[self.current_account]['last_modified'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                save_accounts()
+                self.display_account_details(self.current_account)
+                self.status_var.set("✓ Password updated!")
+                messagebox.showinfo("Success", "Account updated with new password!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed: {str(e)}")
     
     def copy_password(self):
         """Copy password to clipboard using pyperclip"""
@@ -539,23 +745,15 @@ class GateKeeperGUI:
         """Open dialog to add a new account"""
         dialog = tk.Toplevel(self.root)
         dialog.title("Add New Account")
-        dialog.geometry("550x600")
+        dialog.geometry("500x550")
         dialog.transient(self.root)
-        dialog.grab_set()
-        
-        # Make dialog modal
-        dialog.focus_set()
         dialog.grab_set()
         
         ttk.Label(dialog, text="Add New Account", font=('Arial', 16, 'bold')).pack(pady=10)
         
-        # Main frame
-        main_frame = ttk.Frame(dialog, padding="20")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Create a canvas with scrollbar for the form
-        canvas = tk.Canvas(main_frame, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        # Main frame with scrollbar for better UX
+        canvas = tk.Canvas(dialog)
+        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
         scrollable_frame.bind(
@@ -570,8 +768,8 @@ class GateKeeperGUI:
         scrollbar.pack(side="right", fill="y")
         
         # Form fields
-        frame = ttk.Frame(scrollable_frame)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        frame = ttk.Frame(scrollable_frame, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
         
         # Nickname
         ttk.Label(frame, text="Nickname:", font=('Arial', 10)).grid(row=0, column=0, sticky=tk.W, pady=8)
@@ -609,7 +807,6 @@ class GateKeeperGUI:
             password_var.set(pwd)
             password_entry.config(show="")
             show_pwd_var.set(True)
-            # Update strength meter
             update_strength()
         
         ttk.Button(password_frame, text="Generate", command=generate_and_set).pack(side=tk.LEFT, padx=5)
@@ -629,7 +826,7 @@ class GateKeeperGUI:
         strength_preview_frame = ttk.LabelFrame(frame, text="Password Strength Preview", padding="10")
         strength_preview_frame.grid(row=5, column=0, columnspan=2, pady=15, sticky=tk.EW)
         
-        preview_bar = ttk.Progressbar(strength_preview_frame, length=400, mode='determinate')
+        preview_bar = ttk.Progressbar(strength_preview_frame, length=350, mode='determinate')
         preview_bar.pack(pady=5)
         
         preview_label = ttk.Label(strength_preview_frame, text="", font=('Arial', 10, 'bold'))
@@ -637,18 +834,6 @@ class GateKeeperGUI:
         
         preview_crack = ttk.Label(strength_preview_frame, text="", font=('Arial', 8))
         preview_crack.pack()
-        
-        # Strengths preview
-        preview_strengths = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
-                                    bg='#f0fff0', fg='#27ae60', wrap=tk.WORD)
-        preview_strengths.pack(fill=tk.X, pady=2)
-        preview_strengths.config(state=tk.DISABLED)
-        
-        # Issues preview
-        preview_issues = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
-                                 bg='#fff0f0', fg='#e74c3c', wrap=tk.WORD)
-        preview_issues.pack(fill=tk.X, pady=2)
-        preview_issues.config(state=tk.DISABLED)
         
         def update_strength(*args):
             pwd = password_var.get()
@@ -659,38 +844,10 @@ class GateKeeperGUI:
                                     foreground=feedback['color'])
                 crack_time = estimate_crack_time(pwd)
                 preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
-                
-                # Update strengths
-                preview_strengths.config(state=tk.NORMAL)
-                preview_strengths.delete(1.0, tk.END)
-                if feedback['strengths']:
-                    for s in feedback['strengths']:
-                        preview_strengths.insert(tk.END, f"• {s}\n")
-                else:
-                    preview_strengths.insert(tk.END, "• No notable strengths\n")
-                preview_strengths.config(state=tk.DISABLED)
-                
-                # Update issues
-                preview_issues.config(state=tk.NORMAL)
-                preview_issues.delete(1.0, tk.END)
-                if feedback['issues']:
-                    for issue in feedback['issues']:
-                        preview_issues.insert(tk.END, f"• {issue}\n")
-                else:
-                    preview_issues.insert(tk.END, "• No issues found - Excellent!\n")
-                preview_issues.config(state=tk.DISABLED)
             else:
                 preview_bar['value'] = 0
                 preview_label.config(text="Enter a password")
                 preview_crack.config(text="")
-                
-                preview_strengths.config(state=tk.NORMAL)
-                preview_strengths.delete(1.0, tk.END)
-                preview_strengths.config(state=tk.DISABLED)
-                
-                preview_issues.config(state=tk.NORMAL)
-                preview_issues.delete(1.0, tk.END)
-                preview_issues.config(state=tk.DISABLED)
         
         # Trace password changes
         password_var.trace('w', update_strength)
@@ -776,7 +933,7 @@ class GateKeeperGUI:
         # Create edit dialog
         edit_window = tk.Toplevel(self.root)
         edit_window.title("Edit Account")
-        edit_window.geometry("550x600")
+        edit_window.geometry("500x550")
         edit_window.transient(self.root)
         edit_window.grab_set()
         
@@ -785,29 +942,8 @@ class GateKeeperGUI:
         
         ttk.Label(edit_window, text="Edit Account", font=('Arial', 16, 'bold')).pack(pady=10)
         
-        # Main frame
-        main_frame = ttk.Frame(edit_window, padding="20")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Create a canvas with scrollbar
-        canvas = tk.Canvas(main_frame, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Form fields
-        frame = ttk.Frame(scrollable_frame)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        frame = ttk.Frame(edit_window, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
         
         # Nickname (read-only)
         ttk.Label(frame, text="Nickname:", font=('Arial', 10)).grid(row=0, column=0, sticky=tk.W, pady=8)
@@ -861,7 +997,7 @@ class GateKeeperGUI:
         strength_preview_frame = ttk.LabelFrame(frame, text="Password Strength Preview", padding="10")
         strength_preview_frame.grid(row=5, column=0, columnspan=2, pady=15, sticky=tk.EW)
         
-        preview_bar = ttk.Progressbar(strength_preview_frame, length=400, mode='determinate')
+        preview_bar = ttk.Progressbar(strength_preview_frame, length=350, mode='determinate')
         preview_bar.pack(pady=5)
         
         preview_label = ttk.Label(strength_preview_frame, text="", font=('Arial', 10, 'bold'))
@@ -869,18 +1005,6 @@ class GateKeeperGUI:
         
         preview_crack = ttk.Label(strength_preview_frame, text="", font=('Arial', 8))
         preview_crack.pack()
-        
-        # Strengths preview
-        preview_strengths = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
-                                    bg='#f0fff0', fg='#27ae60', wrap=tk.WORD)
-        preview_strengths.pack(fill=tk.X, pady=2)
-        preview_strengths.config(state=tk.DISABLED)
-        
-        # Issues preview
-        preview_issues = tk.Text(strength_preview_frame, height=2, width=50, font=('Arial', 8),
-                                 bg='#fff0f0', fg='#e74c3c', wrap=tk.WORD)
-        preview_issues.pack(fill=tk.X, pady=2)
-        preview_issues.config(state=tk.DISABLED)
         
         def update_strength(*args):
             pwd = password_var.get()
@@ -891,26 +1015,6 @@ class GateKeeperGUI:
                                     foreground=feedback['color'])
                 crack_time = estimate_crack_time(pwd)
                 preview_crack.config(text=f"⏱️ Crack time: {crack_time}")
-                
-                # Update strengths
-                preview_strengths.config(state=tk.NORMAL)
-                preview_strengths.delete(1.0, tk.END)
-                if feedback['strengths']:
-                    for s in feedback['strengths']:
-                        preview_strengths.insert(tk.END, f"• {s}\n")
-                else:
-                    preview_strengths.insert(tk.END, "• No notable strengths\n")
-                preview_strengths.config(state=tk.DISABLED)
-                
-                # Update issues
-                preview_issues.config(state=tk.NORMAL)
-                preview_issues.delete(1.0, tk.END)
-                if feedback['issues']:
-                    for issue in feedback['issues']:
-                        preview_issues.insert(tk.END, f"• {issue}\n")
-                else:
-                    preview_issues.insert(tk.END, "• No issues found - Excellent!\n")
-                preview_issues.config(state=tk.DISABLED)
             else:
                 preview_bar['value'] = 0
                 preview_label.config(text="Enter a password")
@@ -1013,7 +1117,6 @@ class GateKeeperGUI:
             
             # Add content
             text_widget.insert(tk.END, f"⚠️ Found {len(reused)} reused password(s):\n\n")
-            text_widget.tag_config("warning", foreground="red", font=('Arial', 11, 'bold'))
             
             for i, item in enumerate(reused, 1):
                 text_widget.insert(tk.END, f"\n{i}. Password: {item['password']}\n")
@@ -1144,7 +1247,7 @@ class GateKeeperGUI:
         about_text += "Securely store and manage all your accounts\n\n"
         about_text += "✨ Features:\n"
         about_text += "• Advanced password strength analysis (0-10 scale)\n"
-        about_text += "• Real-time password feedback\n"
+        about_text += "• Password Inspector with actionable tips\n"
         about_text += "• Crack time estimation\n"
         about_text += "• Password reuse detection\n"
         about_text += "• Health dashboard\n"
