@@ -1528,7 +1528,7 @@ class GateKeeperGUI:
         
         ttk.Button(main_frame, text="Close", command=report_window.destroy).pack(pady=15)
     
-        def show_password_generator(self):
+    def show_password_generator(self):
         """Show password generator tool"""
         pwd = generate_password(24)
         feedback = get_password_feedback(pwd)
