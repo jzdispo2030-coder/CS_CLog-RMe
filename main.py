@@ -327,7 +327,7 @@ class ShortcutsWindow(tk.Toplevel):
             tk.Label(f, text=key, bg=Theme.bg_input, fg=Theme.accent_info, font=("Segoe UI",9,"bold"), padx=8, pady=4).pack(side=tk.LEFT)
             tk.Label(f, text=action, bg=Theme.bg_secondary, fg=Theme.text_secondary).pack(side=tk.LEFT, padx=(15,0))
         RoundedButton(main, "Close", self.destroy, Theme.bg_input, width=100, height=35).pack(pady=15)
-        class PasswordInspector(tk.Toplevel):
+class PasswordInspector(tk.Toplevel):
     def __init__(self, parent, nickname, password):
         super().__init__(parent)
         self.parent = parent
@@ -605,7 +605,9 @@ class GateKeeper:
         for w in [bar]:
             w.bind("<Button-1>", self.start_move)
             w.bind("<B1-Motion>", self.on_move)
-    def start_move(self, e): self.x = e.x
+    def start_move(self, e):
+        self.x = e.x
+        self.y = e.y
     def on_move(self, e):
         x = self.root.winfo_x() + e.x - self.x
         y = self.root.winfo_y() + e.y - self.y
@@ -650,7 +652,16 @@ class GateKeeper:
         tk.Label(cat, text="📂 Categories", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font).pack(anchor=tk.W)
         self.category_var = tk.StringVar(value="All")
         for c in ["All","Academic","Personal","Internship","Other"]:
-            tk.Radiobutton(cat, text=c, variable=self.category_var, value=c, bg=Theme.bg_secondary, fg=Theme.text_secondary, selectcolor=Theme.bg_secondary, command=self.refresh_accounts).pack(anchor=tk.W, pady=2)
+            tk.Radiobutton(
+                cat,
+                text=c,
+                variable=self.category_var,
+                value=c,
+                bg=Theme.bg_secondary,
+                fg=Theme.text_secondary,
+                selectcolor=Theme.bg_secondary,
+                command=lambda value=c: self.on_category_change(value)
+            ).pack(anchor=tk.W, pady=2)
         tools = tk.Frame(sidebar, bg=Theme.bg_secondary, padx=15, pady=10)
         tools.pack(fill=tk.X)
         tk.Label(tools, text="🛠️ Tools", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font).pack(anchor=tk.W)
@@ -720,15 +731,21 @@ class GateKeeper:
         self.panel_issues.config(state=tk.DISABLED)
         tip = tk.Label(panel, text="💡 Tip: Longer passwords are stronger than complex ones", bg=Theme.bg_secondary, fg=Theme.text_muted, font=Theme.small_font, wraplength=280)
         tip.pack(side=tk.BOTTOM, pady=15)
+    def on_category_change(self, value):
+        self.category_var.set(value)
+        self.refresh_accounts()
     def refresh_accounts(self):
         for w in self.cards_frame.winfo_children(): w.destroy()
         search = self.search_var.get().lower()
-        cat = self.category_var.get()
+        selected_cat = self.category_var.get().strip().lower()
         filtered = []
         for name, data in accounts.items():
-            if cat != "All":
-                if cat == "Other" and data['category'].lower() in ["academic","personal","internship"]: continue
-                elif data['category'] != cat: continue
+            account_cat = str(data.get('category', 'Other')).strip().lower()
+            if selected_cat != "all":
+                if selected_cat == "other" and account_cat in ["academic", "personal", "internship"]:
+                    continue
+                elif selected_cat != "other" and account_cat != selected_cat:
+                    continue
             if search and search not in name.lower() and search not in data['app'].lower(): continue
             filtered.append((name, data))
         filtered.sort(key=lambda x: x[0])
@@ -902,7 +919,8 @@ class GateKeeper:
         update_preview()
         def save():
             accounts[self.current_account]['app'] = app_var.get()
-            accounts[self.current_account]['category'] = cat_var.get()
+            cat = cat_var.get()
+            accounts[self.current_account]['category'] = cat.lower().capitalize() if cat.lower() in ["academic","personal","internship"] else "Other"
             accounts[self.current_account]['password'] = pwd_var.get()
             accounts[self.current_account]['last_modified'] = datetime.now().strftime("%Y-%m-%d %H:%M")
             save_accounts()
